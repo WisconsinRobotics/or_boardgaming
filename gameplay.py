@@ -3,6 +3,7 @@ import numpy as np
 import os, time
 from corner_detection import determineBoardCorners
 from color_detection import detectBoardPieceLocations
+from tic_tac_toe_logic import tic_tac_toe_logic
 
 def errorHandle(s = 'default error message'):
     # print error message in console
