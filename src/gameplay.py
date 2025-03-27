@@ -16,8 +16,8 @@ def clickPicture(cap, count = 1, saveimg = False):
     res, frame = cap.read()
     if res:
         if saveimg:
-            os.makedirs('./images/', exist_ok = True)
-            cv2.imwrite(f'./images/img_{count}_{int(time.time())}.png', frame)
+            os.makedirs('../images/', exist_ok = True)
+            cv2.imwrite(f'../images/img_{count}_{int(time.time())}.png', frame)
         return frame
     else:
         print(f'Cant receive frame (stream end?). trying again. try {count}')
