@@ -9,11 +9,11 @@ except Exception as e:
     
 def readEncoders():
     print(":(")
-    bytes = f.read(8);
+    bytes = f.read(8)
     leftInt = int.from_bytes(bytes[0:3],"little",signed=True)
     rightInt = int.from_bytes(bytes[4:7],"little",signed=True)
     return [leftInt,rightInt]
 
-[leftEnc, rightEnc] = readEncoders();
+[leftEnc, rightEnc] = readEncoders()
 
-print("%d,%d" % (leftEnc, rightEnc));
+print("%d,%d" % (leftEnc, rightEnc))
