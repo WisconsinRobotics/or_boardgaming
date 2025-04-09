@@ -3,7 +3,8 @@ import numpy as np
 import os, time
 from corner_detection import determineBoardCorners
 from color_detection import detectBoardPieceLocations
-from tic_tac_toe_logic import tic_tac_toe_logic
+#from tic_tac_toe_logic import tic_tac_toe_logic
+from tic_tac_toe_logic_v2 import tic_tac_toe_logic_v2, check_win_condition
 
 def errorHandle(s = 'default error message'):
     # print error message in console
@@ -40,7 +41,7 @@ def boardSetup():
 
 # colors:
 # blue blinking - bot turn start - computing best move n waypoints
-# yellow blinking - actual moving
+# yellow blinking - actual moving - humans beware
 # green solid - bot turn end - human move
 # red blinking - error - usually fatal
 
@@ -48,7 +49,29 @@ def main():
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         errorHandle('Cannot open camera')
+    board = boardSetup()
+    bot_piece = 'x'
+
+
+    while True:
+        # click pic and get current board state with piece locations
+        # translate piece locations to piece positions and return board with all piece positions
+
+        # check win condition and break loop if win achieved
+        winner = check_win_condition(board)
+        if winner != '':
+            print('GAME END')
+            print(winner.upper(), 'WON')
+            break
+        # get next best move
+        next_move_position = tic_tac_toe_logic_v2(board, bot_piece)
+        # translate position to location
+
+        # get and execute path to accomplish next best move
+
+        # wait until button press - ie human turn end and bot turn start
 
     cap.release()
     cv2.destroyAllWindows()
+
     

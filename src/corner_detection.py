@@ -51,5 +51,23 @@ def determineBoardCorners(frame):
     return {
         'w': width_x,
         'h': height_y,
-        'corners': corners
+        'corners': corners # [[3, 2], [2, 5], [2, 4], [9, 7]]
     }
+
+# this will make the assumption that
+# a - the board corners are in order, i.e., fix the board corners function to make it that
+# b - there r only 4 board corners
+# c - not only r they ordered they r arranged as top-left, top-right, bottom-right, bottom-left - 
+#       y? cuz i need smth i can work with n im alr putting a lot of faith in this working perfectly
+# d - the width and height are what they claim - they rnt but also they can be kept consistent rather easily 
+#       so words being off is technically not the end of the world
+
+def determineBoardLocations(d):
+    b = np.zeros((3, 3, 2))
+    top_left, bottom_right, bottom_left, top_right = d['corners']
+    b[0][0] = top_left[0] - (d['width_x'] / 2), top_left[1] - (d['height_y'] / 2)
+    #b[0][0] = (corner[0][0] - (width_x // 2), corner[0][1] - (height_y // 2) )
+    #b[0][1] = (corner[0][0] - (width_x // 2), corner[0][1] - (height_y // 2) )
+    # center = mid point of all corners
+    # (corner[0] + (width_x // 2) = 
+    pass

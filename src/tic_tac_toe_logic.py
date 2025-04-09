@@ -105,11 +105,11 @@ def tic_tac_toe_logic(board):
         return blank
     
     ### CHECK FOR REMAINING MOVES ###
-    if(not block_opp.len == 0): # opponent has a row/col with 2 o's and 1 blank
+    if(not len(block_opp) == 0): # opponent has a row/col with 2 o's and 1 blank
         return block_opp
     if(board[1][1] == ""):
         return [1,1]
-    if(not priority_blank.length == 0): # there's a row/col with 2 blanks and 1 x
+    if(not len(priority_blank) == 0): # there's a row/col with 2 blanks and 1 x
         return priority_blank
     
-    return all_blanks[ random.randrange(0, all_blanks.len - 1) ]
+    return all_blanks[ random.randrange(0, len(all_blanks) - 1) ]
