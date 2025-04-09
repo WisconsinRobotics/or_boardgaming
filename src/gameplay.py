@@ -5,6 +5,7 @@ from corner_detection import determineBoardCorners
 from color_detection import detectBoardPieceLocations
 #from tic_tac_toe_logic import tic_tac_toe_logic
 from tic_tac_toe_logic_v2 import tic_tac_toe_logic_v2, check_win_condition
+from path_planning import translate_position_to_location, find_and_execute_path
 
 def errorHandle(s = 'default error message'):
     # print error message in console
@@ -66,9 +67,9 @@ def main():
         # get next best move
         next_move_position = tic_tac_toe_logic_v2(board, bot_piece)
         # translate position to location
-
+        new_location = translate_position_to_location(next_move_position)
         # get and execute path to accomplish next best move
-
+        find_and_execute_path(new_location)
         # wait until button press - ie human turn end and bot turn start
 
     cap.release()

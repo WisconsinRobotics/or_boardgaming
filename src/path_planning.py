@@ -39,7 +39,7 @@ def apply_smooth_interp(p1, p2):
     
 
 # pieces will be kept at opposite sides - bot only responsible to pick up a specific side
-def final_path(new_position):
+def find_and_execute_path(new_location):
 
     # main points:
         # rest/start location
@@ -58,9 +58,6 @@ def final_path(new_position):
         move_xy(pt)
     # pick up piece
     move_z(pick_piece = True)
-
-    # get new location from new position
-    new_location = translate_position_to_location(new_position)
 
     # get smooth interpolation pts piece storage location to new location
     get_points = apply_smooth_interp(PIECE_STORAGE_LOCATION, new_location)
