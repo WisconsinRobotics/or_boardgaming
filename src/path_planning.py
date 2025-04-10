@@ -1,9 +1,48 @@
 import numpy as np
 
-def move_xy(new_location):
-    pass
+X_MOTOR_SPEED = 1
+Y_MOTOR_SPEED = 1
+
+def move_xy(x_motor,y_motor,curr_location,new_location):
+
+    # Find difference between current
+    # and new location to decide how
+    # to move
+    diff = new_location - curr_location
+    # Initialize the motors
+    if (diff[0] < 0):
+        # Move X with full speed
+        # Sleep says how many seconds
+        # Consider sleep as how much we want to move
+        x_motor.backward(X_MOTOR_SPEED)
+        sleep(abs(diff[0]))
+        x_motor.stop()
+    else if (diff[0] > 0):
+        x_motor.forward(X_MOTOR_SPEED)
+        sleep(abs(diff[0]))
+        x_motor.stop()
+
+    if (diff[1] < 0):
+        # Move Y with full speed
+        # Sleep says how many seconds
+        # Consider sleep as how much we want to move
+        y_motor.backward(Y_MOTOR_SPEED)
+        sleep(abs(diff[1]))
+        y_motor.stop()
+    else if (diff[1] > 0):
+        y_motor.forward(Y_MOTOR_SPEED)
+        sleep(abs(diff[1]))
+        y_motor.stop()
+
+    # Move Y with full speed
+    # Sleep says how many seconds
+    # Consider sleep as how much we want to move
+    y_motor.forward(Y_MOTORSPEED)
+    sleep(new_location[1])
+    y_motor.stop()
+
 def move_z(pick_piece = True):
-    pass
+    
 
 REST_LOCATION = [0, 0] # placeholder
 PIECE_STORAGE_LOCATION = [0, 0] # placeholder

@@ -6,6 +6,15 @@ from color_detection import detectBoardPieceLocations
 #from tic_tac_toe_logic import tic_tac_toe_logic
 from tic_tac_toe_logic_v2 import tic_tac_toe_logic_v2, check_win_condition
 from path_planning import translate_position_to_location, find_and_execute_path
+from gpiozero import PhaseEnableMotor
+
+X_MOTOR_PINS = [12,24]
+Y_MOTOR_PINS = [13,25]
+Z_MOTOR_PINS = []
+
+X_ENCODER = [14,15]
+Y_ENCODER = [7,8]
+Z_ENCODER = []
 
 def errorHandle(s = 'default error message'):
     # print error message in console
@@ -53,6 +62,8 @@ def main():
     board = boardSetup()
     bot_piece = 'x'
 
+    X_MOTOR = PhaseEnableMotor(X_MOTOR_PINS[0],X_MOTOR_PINS[1])
+    Y_MOTOR = PhaseEnableMotor(Y_MOTOR_PINS[0],Y_MOTOR_PINS[1])
 
     while True:
         # click pic and get current board state with piece locations
