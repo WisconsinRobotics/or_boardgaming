@@ -22,18 +22,8 @@ def apply_smooth_interp(p1, p2):
         loc_diff = dr * (drmax / drlength)
     
     i = 0
-    res = []
-    while True:
-        next_p = p1 + i * loc_diff
-        # if next_p further from p2 then next_p = p2
-        if np.sqrt(dr.dot(np.array(next_p) - np.array(res[-1]))) > np.sqrt(dr.dot(np.array(p2) - np.array(res[-1]))):
-            next_p = p2
-        res.append(next_p)
-        i += 1
-        if p2 in res:
-            break
-    return res
-        
+    steps = max(1, drmax // drlength) #loc_diff // dr
+    return np.linspace(p1, p2, num=steps)
     
 
     

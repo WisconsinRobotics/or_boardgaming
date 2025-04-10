@@ -70,6 +70,7 @@ def main():
         new_location = translate_position_to_location(next_move_position)
         # get and execute path to accomplish next best move
         find_and_execute_path(new_location)
+
         # wait until button press - ie human turn end and bot turn start
 
     cap.release()

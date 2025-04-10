@@ -1,6 +1,8 @@
 import numpy as np
 import cv2 as cv
- 
+
+BOARD_SQUARE_SIZE = 2 # in inches
+
 def determineBoardCorners(frame):
     # Our operations on the frame come here
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
