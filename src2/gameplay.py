@@ -5,28 +5,8 @@ from path_planning import find_and_execute_path
 from hardware_setup import *
 from cv_functions import *
 
-def errorHandle(s = 'default error message'):
-    # print error message in console
-    print('Error:', s)
-    # do LED red flashing or smth
-    # make sad sound
-    # exit
 
-def clickPicture(cap, count = 1, saveimg = False):
-    res, frame = cap.read()
-    if res:
-        if saveimg:
-            os.makedirs('../images/', exist_ok = True)
-            cv2.imwrite(f'../images/img_{count}_{int(time.time())}.png', frame)
-        return frame
-    else:
-        print(f'Cant receive frame (stream end?). trying again. try {count}')
-        if count < 3:
-            time.sleep(0.2)
-            return clickPicture(cap, count + 1, saveimg=saveimg)
-        else:
-            errorHandle('camera error. pic not clicked even after 3 attempts. sadge')
-            return None
+
 
 def boardSetup():
     frame = clickPicture()
@@ -45,7 +25,7 @@ def main():
     hardware = initializeAllHardware()
     for val in hardware.values():
         if val is None:
-            print('value set to None - this is bad')
+            print('ERROR: value set to None - this is bad')
             closeEverything(hardware)
             return None
 
@@ -59,8 +39,8 @@ def main():
 
     while True:
         # wait until button press - ie human turn end and bot turn start
-        # print('waiting for button to be pressed to start robot turn')
-        # hardware['TURN_INDICATOR_BUTTON'].wait_for_press()
+        print('waiting for button to be pressed to start robot turn')
+        hardware['TURN_INDICATOR_BUTTON'].wait_for_press()
 
         # TODO - click pic and get current board state with piece locations
         # TODO - translate piece locations to piece positions and return board with all piece positions
@@ -84,8 +64,9 @@ def main():
         next_move_world_location = translate_position_to_location(next_move_position)
 
         # can be a safety thing? wait until button released and child has stepped back before motors do things
-        # print('waiting for button release if not already done before starting motors')
-        # hardware['TURN_INDICATOR_BUTTON'].wait_for_release()
+        if hardware['TURN_INDICATOR_BUTTON'].is_pressed:
+            print('waiting for button release if not already done before starting motors')
+            hardware['TURN_INDICATOR_BUTTON'].wait_for_release()
 
         # TODO - get and execute path to accomplish next best move
         print('computing and executing next best move')

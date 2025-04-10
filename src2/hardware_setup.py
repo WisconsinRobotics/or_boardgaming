@@ -9,7 +9,7 @@ def initializeAllHardware():
     res['CAMERA'] = cv2.VideoCapture(0)
     if not res['CAMERA'].isOpened():
         res['CAMERA'] = None
-        print('Cannot open camera')
+        print('ERROR: Cannot open camera')
         return res
 
     print('Camera successfully started')
@@ -30,15 +30,15 @@ def initializeAllHardware():
     # res['Z_ENCODER'] = RotaryEncoder(**Z_ENCODER_PINS, max_steps=0)
     print('Encoders successfully setup')
 
-    # print('Starting servo setup')
-    # res['CLAW_SERVO'] = Servo(CLAW_SERVO_PIN)
-    # print('Servo successfully setup')
+    print('Starting servo setup')
+    res['CLAW_SERVO'] = Servo(CLAW_SERVO_PIN)
+    print('Servo successfully setup')
 
-    # print('Starting button setup (limit switches and main button)')
-    # res['X_LIMIT_SWITCH'] = Button(X_LIMIT_SWITCH_PIN)
-    # res['Y_LIMIT_SWITCH'] = Button(Y_LIMIT_SWITCH_PIN)
-    # res['TURN_INDICATOR_BUTTON'] = Button(TURN_INDICATOR_BUTTON_PIN)
-    # print('Buttons successfully setup')
+    print('Starting button setup (limit switches and main button)')
+    res['X_LIMIT_SWITCH'] = Button(X_LIMIT_SWITCH_PIN)
+    res['Y_LIMIT_SWITCH'] = Button(Y_LIMIT_SWITCH_PIN)
+    res['TURN_INDICATOR_BUTTON'] = Button(TURN_INDICATOR_BUTTON_PIN)
+    print('Buttons successfully setup')
 
     return res
 
