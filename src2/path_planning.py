@@ -1,5 +1,5 @@
 import numpy as np
-import time
+import time, asyncio
 from constants import *
 
 def moveMotor_OpenLoop(motor, encoder, distance: float):
@@ -15,7 +15,7 @@ def moveMotor_OpenLoop(motor, encoder, distance: float):
 def translate_real_world_to_encoder_world(distance: float):
     pass
 
-def moveMotor(motor, encoder, steps: int):
+async def moveMotor(motor, encoder, steps: int):
     curr_encoder_val = encoder.steps
     if steps > 0:
         motor.forward(MOTOR_SPEED)
@@ -26,21 +26,23 @@ def moveMotor(motor, encoder, steps: int):
             ((steps < 0) and (encoder.steps >= (curr_encoder_val - steps)))):
             break
     motor.stop()
+    return 0
     
 
 
 
-
-
-
-def move_xy(x_motor,y_motor,curr_location,new_location):
+async def move_xy(hardware, curr_location, new_location):
 
     # Find difference between current and new location
     location_diff = new_location - curr_location
+    steps_diff = translate_real_world_to_encoder_world(location_diff)
+    await moveMotor(hardware['X_MOTOR'], hardware['X_ENCODER'], steps_diff)
+    await moveMotor(hardware['Y_MOTOR'], hardware['Y_ENCODER'], steps_diff)
+    return 0
 
 
 # Unfortunately i know not numbers or if servo max is open or close so this remains a skeleton 
-def move_z(pick_piece = True):
+def move_z(hardware, pick_piece = True):
     if pick_piece:
         # open servo
         pass
@@ -86,7 +88,7 @@ def apply_smooth_interp(p1, p2, min_jerk = True):
     
 
 # pieces will be kept at opposite sides - bot only responsible to pick up a specific side
-def find_and_execute_path(new_location):
+def find_and_execute_path(new_location, hardware):
 
     # main points:
         # rest/start location
@@ -101,20 +103,20 @@ def find_and_execute_path(new_location):
 
     # get smooth interpolation pts from rest/start to piece storage location
     get_points = apply_smooth_interp(REST_LOCATION, PIECE_STORAGE_LOCATION, min_jerk=True)
-    for pt in get_points:
-        move_xy(pt)
+    for i in range(1, len(get_points)):
+        asyncio.run(move_xy(hardware, get_points[i - 1], get_points[i]))
     # pick up piece
-    move_z(pick_piece = True)
+    move_z(hardware, pick_piece = True)
 
     # get smooth interpolation pts piece storage location to new location
     get_points = apply_smooth_interp(PIECE_STORAGE_LOCATION, new_location, min_jerk=True)
-    for pt in get_points:
-        move_xy(pt)
+    for i in range(1, len(get_points)):
+        asyncio.run(move_xy(hardware, get_points[i - 1], get_points[i]))
 
     # release piece
-    move_z(pick_piece = False)
+    move_z(hardware, pick_piece = False)
 
     # get smooth interpolation pts from new location to rest location
     get_points = apply_smooth_interp(new_location, REST_LOCATION, min_jerk=True)
-    for pt in get_points:
-        move_xy(pt)
+    for i in range(1, len(get_points)):
+        asyncio.run(move_xy(hardware, get_points[i - 1], get_points[i]))
