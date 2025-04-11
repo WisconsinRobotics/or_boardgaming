@@ -12,10 +12,13 @@ def moveMotor_OpenLoop(motor, encoder, distance: float):
     print(encoder.steps)
 
 
-def translate_real_world_to_encoder_world(distance: float):
-    pass
+def translate_real_world_to_encoder_world(distance_in_cm: float):
+    distance_in_one_rev = 0.8 # in cm
+    steps_in_one_rev = 2797
+    return steps_in_one_rev * distance_in_cm / distance_in_one_rev
 
-async def moveMotor(motor, encoder, steps: int):
+async def moveMotor(motor, encoder, distance: float):
+    steps = translate_real_world_to_encoder_world(distance)
     curr_encoder_val = encoder.steps
     if steps > 0:
         motor.forward(MOTOR_SPEED)
@@ -32,12 +35,10 @@ async def moveMotor(motor, encoder, steps: int):
 
 
 async def move_xy(hardware, curr_location, new_location):
-
     # Find difference between current and new location
     location_diff = new_location - curr_location
-    steps_diff = translate_real_world_to_encoder_world(location_diff)
-    await moveMotor(hardware['X_MOTOR'], hardware['X_ENCODER'], steps_diff)
-    await moveMotor(hardware['Y_MOTOR'], hardware['Y_ENCODER'], steps_diff)
+    await moveMotor(hardware['X_MOTOR'], hardware['X_ENCODER'], location_diff[0])
+    await moveMotor(hardware['Y_MOTOR'], hardware['Y_ENCODER'], location_diff[1])
     return 0
 
 
