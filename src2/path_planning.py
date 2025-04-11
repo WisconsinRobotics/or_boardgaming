@@ -30,8 +30,8 @@ async def moveMotor(motor, encoder, distance: float):
             break
     motor.stop()
     return 0
-    
 
+#def homing(motor, encoder, distance: float):
 
 
 async def move_xy(hardware, curr_location, new_location):
@@ -40,6 +40,11 @@ async def move_xy(hardware, curr_location, new_location):
     await moveMotor(hardware['X_MOTOR'], hardware['X_ENCODER'], location_diff[0])
     await moveMotor(hardware['Y_MOTOR'], hardware['Y_ENCODER'], location_diff[1])
     return 0
+
+# things i wanna do:
+# pid - optional
+# add async or threading
+# homing + exact location - i will do this tho
 
 
 # Unfortunately i know not numbers or if servo max is open or close so this remains a skeleton 
