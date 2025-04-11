@@ -29,22 +29,24 @@ def detectBoardPieceLocations(imageFrame):
     orange_upper = np.array([25, 255, 255], np.uint8)
     orange_mask = cv2.inRange(hsvFrame, orange_lower, orange_upper)
 
+    # Test the color limits to make sure they identify the blue pieces
+    blue_lower = np.array([110, 100, 100], np.uint8)
+    blue_upper = np.array([160, 255, 255], np.uint8)
+    blue_mask = cv2.inRange(hsvFrame, blue_lower, blue_upper)
+
     kernel = np.ones((5, 5), "uint8")
 
     orange_mask = cv2.dilate(orange_mask, kernel)
-    res_orange = cv2.bitwise_and(imageFrame, imageFrame, mask=orange_mask) # not quite sure what this is for
+    blue_mask = cv2.dilate(blue_mask, kernel)
+    combined_mask = cv2.bitwise_or(orange_mask, blue_mask)
 
-    contours, hierarchy = cv2.findContours(orange_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(combined_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     pieceLocs = []
     for i, contour in enumerate(contours):
         area = cv2.contourArea(contour)
-        if area > 1000: # not sure what the 1000 logic is but will figure out when testing ig
+        if area > 1000:
             x, y, w, h = cv2.boundingRect(contour)
             imageFrame = cv2.rectangle(imageFrame, (x, y), (x + w, y + h), (0, 0, 255), 2)
-
-            # if game_board["b2"][1][0] > (x + 35) > game_board["b2"][0][0]:
-            #     print("O PLACED HERE")
-
             pieceLocs.append({'x': x, 'y': y, 'w': w, 'h': h})
 
     return pieceLocs
