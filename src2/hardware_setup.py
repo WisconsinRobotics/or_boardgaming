@@ -32,6 +32,7 @@ def initializeAllHardware():
 
     print('Starting servo setup')
     res['CLAW_SERVO'] = Servo(CLAW_SERVO_PIN)
+    res['Z_SERVO'] = Servo(Z_SERVO_PIN)
     print('Servo successfully setup')
 
     print('Starting button setup (limit switches and main button)')
