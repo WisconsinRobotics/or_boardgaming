@@ -30,8 +30,8 @@ def detectBoardPieceLocations(imageFrame):
     orange_mask = cv2.inRange(hsvFrame, orange_lower, orange_upper)
 
     # Test the color limits to make sure they identify the blue pieces
-    blue_lower = np.array([160, 150, 150], np.uint8)
-    blue_upper = np.array([187, 255, 255], np.uint8)
+    blue_lower = np.array([110, 100, 100], np.uint8)
+    blue_upper = np.array([160, 255, 255], np.uint8)
     blue_mask = cv2.inRange(hsvFrame, blue_lower, blue_upper)
 
     kernel = np.ones((5, 5), "uint8")
