@@ -26,7 +26,9 @@ def initializeAllHardware():
     
     print('Starting encoder setup')
     res['X_ENCODER'] = RotaryEncoder(**X_ENCODER_PINS, max_steps=0)
+    printf("x encoder pin = ", X_ENCODER_PINS)
     res['Y_ENCODER'] = RotaryEncoder(**Y_ENCODER_PINS, max_steps=0)
+    printf("y encoder pin = ", Y_ENCODER_PINS)
     # res['Z_ENCODER'] = RotaryEncoder(**Z_ENCODER_PINS, max_steps=0)
     print('Encoders successfully setup')
 
