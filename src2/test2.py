@@ -34,14 +34,35 @@ sleep(0.5)
 print("Running motors forward...")
 X_MOTOR.forward(MOTOR_SPEED)
 
-print("X Encoder position:", rotorX.steps)
 Y_MOTOR.forward(MOTOR_SPEED)
 print("encoder", rotorX.steps)
-while rotorX.steps > -700:
+while rotorX.steps < 700 or rotorY.steps < 700:
     print("StepsX ",rotorX.steps)
     print("StepsY ", rotorY.steps)
 
+    if (rotorX.steps >= 700):
+        X_MOTOR.stop()
+    if (rotorY.steps >= 700):
+        Y_MOTOR.stop()
+X_MOTOR.stop()
+Y_MOTOR.stop()
+X_MOTOR.backward(0.1)
+while (rotorX.steps > 700):
+    print("StepsX back ",rotorX.steps)
+X_MOTOR.stop()
+Y_MOTOR.backward(0.1)
+while (rotorY.steps > 700):
+    print("StepsY back ", rotorY.steps)
+Y_MOTOR.stop()
+X_MOTOR.stop()
+Y_MOTOR.stop()
+
+
+print("Final StepsX ", rotorX.steps)
+print("Final StepsY ", rotorY.steps)
+
 # Run backward
+'''
 print("Running motors backward...")
 X_MOTOR.backward(MOTOR_SPEED)
 print("encoder" , rotorX.steps)
@@ -61,6 +82,9 @@ SLEEP.off()
 
 print("X Encoder pins:", X_ENCODER_PINS)
 print("Y Encoder pins:", Y_ENCODER_PINS)
+print("Final StepsX ", rotorX.steps)
+print("Final StepsY ", rotorY.steps)
 
 print("Motor test complete.")
 
+'''
