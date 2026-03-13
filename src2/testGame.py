@@ -36,7 +36,10 @@ def runMotorsToPos(targetX, targetY):
     print("Target X :", targetX, " Target Y :", targetY)
     X_MOTOR.forward(MOTOR_SPEED)
     Y_MOTOR.forward(MOTOR_SPEED)
+    print(rotorY.steps)
     while rotorX.steps < targetX or rotorY.steps < targetY:
+        print(rotorY.steps)
+        sleep(.001)
         if (rotorX.steps >= targetX):
             X_MOTOR.stop()
         if (rotorY.steps >= targetY):
@@ -63,4 +66,4 @@ def runMotorsToPos(targetX, targetY):
 
     print("Final StepsX ", rotorX.steps)
     print("Final StepsY ", rotorY.steps)
-runMotorsToPos(1200, 400)
+#runMotorsToPos(1200, 400)

@@ -4,7 +4,7 @@ import time
 GPIO.setmode(GPIO.BCM)
 
 OUT_PIN = 20   # drives LOW
-IN_PIN  = 16   # reads switch state
+IN_PIN  = 19   # reads switch state
 
 # Drive GPIO20 LOW
 GPIO.setup(OUT_PIN, GPIO.OUT)
