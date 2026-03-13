@@ -4,6 +4,7 @@ import RPi.GPIO as GPIO
 from constants import *
 import time
 from gpiozero.pins.pigpio import PiGPIOFactory
+
 Device.pin_factory = PiGPIOFactory()
 class LIMIT(Enum):
     X_LIM_NEG = 0
