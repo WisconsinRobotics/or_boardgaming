@@ -17,22 +17,6 @@ def read_joystick():
         return None
     pattern = r"Button Pressed:\s+(\d+)\s+Rx value:\s+(\d+)\s+Ry value:\s+(\d+)" 
     button, y, x = re.findall(pattern, line)[-1] 
-    # if match: 
-    #     # Extract values from the capture groups 
-    #     sw_val = int(match.group(1)) 
-    #     rx_val = int(match.group(2))
-    #     ry_val = int(match.group(3))
-    # else:
-    #     return None
-    
-   
-    # try:
-    #     x = rx_val
-    #     y = ry_val
-    #     button = sw_val
-    #     return x, y, button
-    # except ValueError:
-    #     return None
     return int(x), int(y), int(button)
 
 while True:
