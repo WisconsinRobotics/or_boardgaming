@@ -1,3 +1,5 @@
+# To run this file, make sure to run sudo pigpiod beforehand
+
 from enum import Enum
 from gpiozero import PhaseEnableMotor, OutputDevice, RotaryEncoder, Servo, Button, Device
 import RPi.GPIO as GPIO
@@ -14,7 +16,8 @@ class LIMIT(Enum):
 
 class Gantry():
     def __init__(self):
-        self.is_homed = False
+        self.is_x_homed = False
+        self.is_y_homed = False
 
         print('Starting motor setup')
         self.X_MOTOR = PhaseEnableMotor(*X_MOTOR_PINS)
@@ -56,9 +59,33 @@ class Gantry():
             return GPIO.input(self.Y_LIMIT_SWITCH_POS_PIN) == GPIO.LOW
         else:
             raise ValueError("unexpected arg for is_pressed: " + limit)
+ 
+    # expect speed to be between -1.0 and 1.0
+    def set_x_vel(self, speed: float):
+        if speed < -1 or speed > 1:
+            raise ValueError("speed should be between -1.0 and 1.0 ", speed)
 
-    def home(self, speed=0.3):
-        self.Y_MOTOR.backward(speed)
+        if x > 0:
+            self.X_MOTOR.backward(speed)
+        elif x < 0:
+            self.X_MOTOR.forward(speed)
+        else:
+            self.X_MOTOR.stop()
+
+    def set_y_vel(self, speed: float):
+        if speed < -1 or speed > 1:
+            raise ValueError("speed should be between -1.0 and 1.0 ", speed)
+
+        # direction is intentionally inverted - if motor changes double check this is correct
+        if y > 0:
+            self.Y_MOTOR.forward(speed)
+        elif y < 0:
+            self.Y_MOTOR.backward(speed)
+        else:
+            self.Y_MOTOR.stop()
+
+    def home_y(self, speed=0.3):
+        self.set_y_vel(-speed)
         while not self._is_pressed(LIMIT.Y_LIM_NEG):
             print("encoder: ", self.Y_ENCODER.steps)
             time.sleep(0.01)
@@ -66,37 +93,46 @@ class Gantry():
         self.Y_ENCODER.value = 0
         self.is_homed = True
 
-        self.Y_MOTOR.forward(speed)
+        self.set_y_val(speed)
         start_time = time.time()
+        # keep spinning for 5 seconds
         while (time.time() - start_time) < 5:
             print(self.Y_ENCODER.steps)
             time.sleep(0.1)
         self.Y_MOTOR.stop()
+        self.is_y_homed = True
 
-    def get_pos_inches(self):
+    def home_x(self, speed=0.3):
+        self.set_x_vel(-speed)
+        while not self._is_pressed(LIMIT.X_LIM_NEG):
+            print("encoder: ", self.X_ENCODER.steps)
+            time.sleep(0.01)
+        self.X_MOTOR.stop()
+        self.X_ENCODER.value = 0
+        self.is_homed = True
+
+        self.set_x_val(speed)
+        start_time = time.time()
+        # keep spinning for 5 seconds
+        while (time.time() - start_time) < 5:
+            print(self.X_ENCODER.steps)
+            time.sleep(0.1)
+        self.X_MOTOR.stop()
+        self.is_x_homed = True
+
+    def get_x_pos_inches(self):
+        return self.X_ENCODER.steps / STEPS_PER_INCH
+
+    def get_y_pos_inches(self):
         """Returns current position in inches based on encoder steps."""
         return self.Y_ENCODER.steps / STEPS_PER_INCH
 
     def move(self, x: float, y: float):
-        if not self.is_homed:
-            raise ValueError("Need to call home() before moving")
-    
-    def move_x(self, x: float):
-        if x > 750:
-            self.X_MOTOR.forward(0.3)
-        elif x < 250:
-            self.X_MOTOR.backward(0.3)
-        else:
-            self.X_MOTOR.stop()
-
-    def move_y(self, y: float):
-        if y > 750:
-            self.Y_MOTOR.forward(0.3)
-        elif y < 250:
-            self.Y_MOTOR.backward(0.3)
-        else:
-            self.Y_MOTOR.stop()
-        
+        if not self.is_x_homed:
+            raise ValueError("Need to call home_x() before moving")
+        elif not self.is_y_homed:
+            raise ValueError("Need to call home_y() before moving")
+           
     def toggle_grab(self):
         self.is_grabbing = not self.is_grabbing
         if (self.is_grabbing):
