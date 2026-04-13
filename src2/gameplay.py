@@ -8,39 +8,26 @@ from cv_functions import *
 
 
 
-def boardSetup():
-    frame = clickPicture()
-    if frame is None:
-        errorHandle('Picture not clicked')
-    boardVals = determineBoardCorners(frame)
-
-    # placeholder
-    board = np.zeros((3, 3))
-    return board
-
 
 def main():
 
     # initialize all hardware
     hardware = initializeAllHardware()
-    for val in hardware.values():
-        if val is None:
-            print('ERROR: value set to None - this is bad')
-            closeEverything(hardware)
-            return None
+    if None in hardware.values():
+        print('ERROR: value set to None - this is bad')
+        closeEverything(hardware)
+        return None
 
-    ROBOT_PIECE = 'x'
+    hardware = defineEncoderLimits(hardware, axis='X')
+    hardware = defineEncoderLimits(hardware, axis='Y')
 
-    BOARD = np.array([
-        ['', '', ''],
-        ['', '', ''],
-        ['', '', ''],
-    ])
+    Tic_Tac_Toe_CV(robot_piece='x')
+
 
     while True:
         # wait until button press - ie human turn end and bot turn start
         print('waiting for button to be pressed to start robot turn')
-        hardware['TURN_INDICATOR_BUTTON'].wait_for_press()
+        #hardware['TURN_INDICATOR_BUTTON'].wait_for_press()
 
         # TODO - click pic and get current board state with piece locations
         # TODO - translate piece locations to piece positions and return board with all piece positions

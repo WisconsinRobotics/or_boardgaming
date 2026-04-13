@@ -1,7 +1,7 @@
 import numpy as np
 import cv2, os, time
 
-BOARD_SQUARE_SIZE = 2 # in inches
+
 
 def clickPicture(cap, count = 1, saveimg = False):
     res, frame = cap.read()
@@ -20,34 +20,82 @@ def clickPicture(cap, count = 1, saveimg = False):
             return None
 
 
+class Tic_Tac_Toe_CV:
+    BOARD = np.array([
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
+    ])
 
-def detectBoardPieceLocations(imageFrame):
+    BOARD_SQUARE_SIZE = 2 # irl size of each square on board in inches
 
-    hsvFrame = cv2.cvtColor(imageFrame, cv2.COLOR_BGR2HSV)
+    def __init__(self, robot_piece = 'x'):
+        self.ROBOT_PIECE = robot_piece
+        self.reset_board()
 
-    orange_lower = np.array([10, 140, 140], np.uint8)
-    orange_upper = np.array([25, 255, 255], np.uint8)
-    orange_mask = cv2.inRange(hsvFrame, orange_lower, orange_upper)
+    def reset_board(self):
+        self.BOARD = np.array([
+            ['', '', ''],
+            ['', '', ''],
+            ['', '', ''],
+        ])
 
-    # Test the color limits to make sure they identify the blue pieces
-    blue_lower = np.array([110, 100, 100], np.uint8)
-    blue_upper = np.array([160, 255, 255], np.uint8)
-    blue_mask = cv2.inRange(hsvFrame, blue_lower, blue_upper)
+    def update_board(self, new_pos, new_piece):
+        assert len(new_pos) == 2, 'invalid position'
+        assert self.BOARD[new_pos] == '', 'position already occupied'
+        self.BOARD[new_pos] = new_piece
 
-    kernel = np.ones((5, 5), "uint8")
+    def getPerspectiveTransform(self, corners):
+        actual_dims = np.float32([
+            [0, 0],
+            [self.BOARD_SQUARE_SIZE, 0],
+            [0, self.BOARD_SQUARE_SIZE],
+            [self.BOARD_SQUARE_SIZE, self.BOARD_SQUARE_SIZE]
+        ])
+        M = cv2.getPerspectiveTransform(corners, actual_dims)
+        return M
 
-    orange_mask = cv2.dilate(orange_mask, kernel)
-    blue_mask = cv2.dilate(blue_mask, kernel)
-    combined_mask = cv2.bitwise_or(orange_mask, blue_mask)
 
-    contours, hierarchy = cv2.findContours(combined_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+
+def detect_locations(hsvFrame, lower_color, upper_color):
     pieceLocs = []
+    mask = cv2.inRange(hsvFrame, lower_color, upper_color)
+    kernel = np.ones((5, 5), "uint8")
+    mask = cv2.dilate(mask, kernel)
+    contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     for i, contour in enumerate(contours):
         area = cv2.contourArea(contour)
         if area > 1000:
             x, y, w, h = cv2.boundingRect(contour)
-            imageFrame = cv2.rectangle(imageFrame, (x, y), (x + w, y + h), (0, 0, 255), 2)
-            pieceLocs.append({'x': x, 'y': y, 'w': w, 'h': h})
+            #imageFrame = cv2.rectangle(imageFrame, (x, y), (x + w, y + h), (0, 0, 255), 2)
+            new_loc = [(x + w // 2), (y + h // 2)]
+            if True:
+                flag = False
+                for loc in pieceLocs:
+                    if np.linalg.norm([loc[0] - new_loc[0], loc[1] - new_loc[1]]) < 100:
+                        flag = True
+                        break
+                if not flag:
+                    pieceLocs.append(new_loc)#'x': x, 'y': y, 'w': w, 'h': h})
+            else:
+                pieceLocs.append(new_loc)
+
+    return pieceLocs
+
+def detectBoardPieceLocations(imageFrame):
+
+    hsvFrame = cv2.cvtColor(imageFrame, cv2.COLOR_BGR2HSV)
+    
+    # Test the color limits to make sure they identify the blue and orange pieces
+    orange_lower = np.array([10, 140, 140], np.uint8)
+    orange_upper = np.array([25, 255, 255], np.uint8)
+    blue_lower = np.array([110, 100, 100], np.uint8)
+    blue_upper = np.array([160, 255, 255], np.uint8)
+    
+    pieceLocs = {}
+    pieceLocs['orange'] = detect_locations(hsvFrame, orange_lower, orange_upper)
+    pieceLocs['blue'] = detect_locations(hsvFrame, blue_lower, blue_upper)
 
     return pieceLocs
 
@@ -61,12 +109,12 @@ def determineBoardCorners(frame):
     ret,thresh = cv2.threshold(gray,100,255,cv2.THRESH_BINARY)
 
     contours,hierarchy = cv2.findContours(thresh, 1, 2)
-    cnt = contours[0]
-    cv2.drawContours(frame, contours, -1, (0,255,0), 2)
+    cnt = np.float32(contours[0])
+    #v2.drawContours(frame, contours, -1, (0,255,0), 2)
 
     ### detects corners ###
     # right now only tracks 4 at a time i think
-    corners = cv2.goodFeaturesToTrack(gray,4,0.01,10)
+    corners = cv2.goodFeaturesToTrack(gray,40,0.01,10)
     corners = np.intp(corners) # array of corners?
 
     # # if corner is within board line contours, add it to board corner array
@@ -98,9 +146,6 @@ def determineBoardCorners(frame):
     #     x,y = i.ravel()
     #     cv2.circle(frame,(x,y),3,(0,0,255),-1)
 
-    return np.float32(corners.reshape(4,2))
+    return np.float32(corners.reshape(40,2))
 
-def getPerspectiveTransform(corners):
-    actual_dims = np.float32([[0, 0], [BOARD_SQUARE_SIZE, 0], [0, BOARD_SQUARE_SIZE], [BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE]])
-    M = cv2.getPerspectiveTransform(corners, actual_dims)
-    return M
+
