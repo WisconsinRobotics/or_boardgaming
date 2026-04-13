@@ -65,10 +65,10 @@ class Gantry():
         if speed < -1 or speed > 1:
             raise ValueError("speed should be between -1.0 and 1.0 ", speed)
 
-        if x > 0:
+        if speed > 0:
             self.X_MOTOR.backward(speed)
-        elif x < 0:
-            self.X_MOTOR.forward(speed)
+        elif speed < 0:
+            self.X_MOTOR.forward(-speed)
         else:
             self.X_MOTOR.stop()
 
@@ -77,10 +77,10 @@ class Gantry():
             raise ValueError("speed should be between -1.0 and 1.0 ", speed)
 
         # direction is intentionally inverted - if motor changes double check this is correct
-        if y > 0:
+        if speed > 0:
             self.Y_MOTOR.forward(speed)
-        elif y < 0:
-            self.Y_MOTOR.backward(speed)
+        elif speed < 0:
+            self.Y_MOTOR.backward(-speed)
         else:
             self.Y_MOTOR.stop()
 
@@ -132,16 +132,39 @@ class Gantry():
             raise ValueError("Need to call home_x() before moving")
         elif not self.is_y_homed:
             raise ValueError("Need to call home_y() before moving")
-           
+          
+    def _move_smoothly(self, servo, start_val, end_val, steps=20, duration=0.5):
+        """Moves a servo from start_val to end_val over a set duration."""
+        delay = duration / steps
+        for i in range(steps + 1):
+            # Linear interpolation between start and end
+            fraction = i / steps
+            current_pos = start_val + (end_val - start_val) * fraction
+            servo.value = current_pos
+            time.sleep(delay)
+
     def toggle_grab(self):
         self.is_grabbing = not self.is_grabbing
-        if (self.is_grabbing):
-            self.Z_SERVO.max()
-            self.CLAW_SERVO.min()
-            time.sleep(1)
-            self.Z_SERVO.min()
+        
+        # Speed settings (adjust these to your liking)
+        # Lower duration = faster movement
+        Z_SPEED = 0.8  
+        CLAW_SPEED = 0.6 
+
+        if self.is_grabbing:
+            # 1. Raise Z-Servo (Min to Max)
+            self._move_smoothly(self.Z_SERVO, -1.0, 1.0, duration=Z_SPEED)
+            # 2. Close Claw (Max to Min)
+            self._move_smoothly(self.CLAW_SERVO, 1.0, -1.0, duration=CLAW_SPEED)
+            time.sleep(0.5)
+            # 3. Lower Z-Servo (Max to Min)
+            self._move_smoothly(self.Z_SERVO, 1.0, -1.0, duration=Z_SPEED)
         else:
-            self.Z_SERVO.max()
-            self.CLAW_SERVO.max()
-            time.sleep(1)
-            self.Z_SERVO.min()
+            # 1. Raise Z-Servo (Min to Max)
+            self._move_smoothly(self.Z_SERVO, -1.0, 1.0, duration=Z_SPEED)
+            # 2. Open Claw (Min to Max)
+            self._move_smoothly(self.CLAW_SERVO, -1.0, 1.0, duration=CLAW_SPEED)
+            time.sleep(0.5)
+            # 3. Lower Z-Servo (Max to Min)
+            self._move_smoothly(self.Z_SERVO, 1.0, -1.0, duration=Z_SPEED)
+
