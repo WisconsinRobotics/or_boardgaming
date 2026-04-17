@@ -4,6 +4,8 @@ from constants import *
 import os
 import threading
 
+
+
 def initCamera(res):
     print(f'Starting Camera Task assigned to thread: {threading.current_thread().name}')
     print(f'ID of process running task 1: {os.getpid()}')
