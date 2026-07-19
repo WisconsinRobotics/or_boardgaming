@@ -1,8 +1,11 @@
+SAMPLE_TEST = True
+
 import cv2, os, time
 import numpy as np
 from tic_tac_toe_logic_v2 import tic_tac_toe_logic_v2, check_win_condition
 from path_planning import find_and_execute_path
-from hardware_setup import *
+if not SAMPLE_TEST:
+    from hardware_setup import *
 from cv_functions import *
 
 ROBOT_PIECE = 'o'
@@ -15,17 +18,19 @@ imgs = list(filter(lambda x: x.endswith('jpg'), os.listdir('..')))
 # green solid - bot turn end - human move
 # red blinking - error - usually fatal
 
+
+
 def main():
+    if not SAMPLE_TEST:
+        # initialize all hardware
+        hardware = initializeAllHardware()
+        if None in hardware.values():
+            print('ERROR: value set to None - this is bad')
+            closeEverything(hardware)
+            return None
 
-    # initialize all hardware
-    hardware = initializeAllHardware()
-    if None in hardware.values():
-        print('ERROR: value set to None - this is bad')
-        closeEverything(hardware)
-        return None
-
-    hardware = defineEncoderLimits(hardware, axis='X')
-    hardware = defineEncoderLimits(hardware, axis='Y')
+        hardware = defineEncoderLimits(hardware, axis='X')
+        hardware = defineEncoderLimits(hardware, axis='Y')
 
     orange_lower = np.array([10, 140, 140], np.uint8)
     orange_upper = np.array([25, 255, 255], np.uint8)
@@ -53,10 +58,16 @@ def main():
             },
             debug = False
         )
+    
 
+    i = 0
     while True:
+        if i > 10:
+            break
+        print(cv_obj.BOARD)
+
         # wait until button press - ie human turn end and bot turn start
-        print('waiting for button to be pressed to start robot turn')
+        print('\nwaiting for button to be pressed to start robot turn')
         #hardware['TURN_INDICATOR_BUTTON'].wait_for_press()
 
         # TODO - click pic and get current board state with piece locations
@@ -80,8 +91,9 @@ def main():
 
         cv_obj.BOARD[next_move_position] = ROBOT_PIECE
 
-
-
+        i += 1
+        if SAMPLE_TEST:
+            continue
         # translate position to location
         print('computing real world location of next best move')
         next_move_world_location = translate_position_to_location(next_move_position)
