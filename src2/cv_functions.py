@@ -171,28 +171,6 @@ class Generic_Board_Game_CV:
 
 
 
-# strats
-# pros of perspective transform
-    # gives only board and eliminated all other noise/colors from background
-    # thus creating a clean slate for color detection based detection of pieces
-        # and also detect based on shapes
-# cons
-    # either needs recomputing every turn - doable n handles occlusion well but untested in diff lighting setups
-    # if reused then can be really broken if board moves too significantly - tho should be able to handle slight movements
-
-
-    # 1 - take pic of empty board to setup the perspective transform then reuse that
-        # if board moves then it would kinda suck - but also 
-    # 2 - detect piece positions exactly
-        # 2.1 - then use the positions of pieces to "relative" guess which orientation it is
-        #
-
-# tasks:
-    # look at the picture to get the board state
-    # get perspective transform from board to get current location of 
-
-
-
 def clickPicture(cap, count = 1, saveimg = False):
     res, frame = cap.read()
     if res:
