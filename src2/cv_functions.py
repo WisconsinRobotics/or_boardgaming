@@ -3,16 +3,16 @@ import cv2, os, time, scipy
 from constants import *
 
 class Generic_Board_Game_CV:
-    def __init__(self, robot_piece, human_piece, board_dims, initial_image, debug = False):
-        self.ROBOT_PIECE = robot_piece
-        self.HUMAN_PIECE = human_piece
-
+    def __init__(self, board_dims, initial_image, piece_diff_method, piece_values, debug = False):
         self.board_dims = board_dims
-        self.BOARD = np.full(self.board_dims, '')
         self.debug = debug
 
-        self.bsize = BOARD_SQUARE_SIZE * 100
+        self.piece_diff_method = piece_diff_method
+        self.piece_values = piece_values
 
+        self.bsize = (BOARD_SQUARE_SIZE * 100, BOARD_SQUARE_SIZE * 100)
+
+        self.BOARD = np.full(self.board_dims, '')
         corners = self.determine_board_corners_3(initial_image)
         self.M = self.compute_perspective_transform_matrix(corners)
 
@@ -20,31 +20,21 @@ class Generic_Board_Game_CV:
     def reset_board(self):
         self.BOARD = np.full(self.board_dims, '')
 
-    # def update_board(self, new_pos, new_piece):
-    #     assert len(new_pos) == 2, 'invalid position'
-    #     assert self.BOARD[new_pos] == new_piece, 'position already occupied'
 
-    #     self.BOARD[new_pos] = new_piece
-    #     if self.debug:
-    #         print(f'Piece {new_piece} added to board position {new_pos}')
-
-    
     def update_board_state(self, frame, reinitialize = False):
         # recompute M if board moves significantly
         if reinitialize:
             corners = self.determine_board_corners_3(frame)
             self.M = self.compute_perspective_transform_matrix(corners)
 
-        board_img = cv2.warpPerspective(frame, self.M, (self.bsize, self.bsize))
-        
-        piece_locs = []
-        for loc in piece_locs:
-            self.BOARD[loc] = self.ROBOT_PIECE
+        board_img = cv2.warpPerspective(frame, self.M, (self.bsize[0], self.bsize[1]))
 
-    
+        piece_locs = self.detect_game_pieces(board_img)
+        for player, loc in piece_locs.items():
+            if self.BOARD[loc] not in ['', self.piece_values[player]['label']]:
+                print('possible error?')
+            self.BOARD[loc] = self.piece_values[player]['label']
 
-
-    
 
     def determine_board_corners_3(self, frame, outlier_thresh = 1.5):
         num_corners = (self.board_dims[0] + 1) * (self.board_dims[1] + 1)
@@ -77,7 +67,7 @@ class Generic_Board_Game_CV:
         # TODO - use bounding lines instead
 
         return final_corners
-    
+
     def filter_outliers_2(self, corners, thresh = 1.5):
         '''
         filter out the outliers in the points detected on the board
@@ -112,71 +102,165 @@ class Generic_Board_Game_CV:
     def compute_perspective_transform_matrix(self, corners):
         actual_dims = np.float32([
             [0, 0],
-            [self.bsize - 1, 0],
-            [self.bsize - 1, self.bsize - 1],
-            [0, self.bsize - 1]
+            [self.bsize[0] - 1, 0],
+            [self.bsize[0] - 1, self.bsize[1] - 1],
+            [0, self.bsize[1] - 1]
         ])
         # reorder corners if not in correct order
         ordered_corners = self.fix_corner_order(corners)
         # get M
         M = cv2.getPerspectiveTransform(ordered_corners, actual_dims)
         return M
+    
+    def detect_game_pieces(self, frame):
+        pieceLocs = {}
+        hsvFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    def detect_game_pieces(self, hsvFrame, lower_color, upper_color):
-        pieceLocs = []
-        mask = cv2.inRange(hsvFrame, lower_color, upper_color)
-        mask = cv2.dilate(mask, np.ones((5, 5), "uint8"))
-        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        for i, contour in enumerate(contours):
-            area = cv2.contourArea(contour)
-            if area > 1000:
-                x, y, w, h = cv2.boundingRect(contour)
-                #imageFrame = cv2.rectangle(imageFrame, (x, y), (x + w, y + h), (0, 0, 255), 2)
-                new_loc = [(x + w // 2), (y + h // 2)]
-                if True:
-                    flag = False
-                    for loc in pieceLocs:
-                        if np.linalg.norm([loc[0] - new_loc[0], loc[1] - new_loc[1]]) < 100:
-                            flag = True
-                            break
-                    if not flag:
-                        pieceLocs.append(new_loc)#'x': x, 'y': y, 'w': w, 'h': h})
-                else:
-                    pieceLocs.append(new_loc)
+        cell_size = (self.bsize[0] // self.board_dims[0], self.bsize[1] // self.board_dims[1])
+
+        for player in self.piece_values:
+            locations = []
+
+            # filter to players color
+            lower_color, upper_color = self.piece_values[player]['color_values']
+            mask = cv2.inRange(hsvFrame, lower_color, upper_color)
+            mask = cv2.dilate(mask, np.ones((5, 5), "uint8"))
+            contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+            # loop through each contour and add each valid contour
+            for contour in contours:
+                area = cv2.contourArea(contour)
+                if area > 300:
+                    moments = cv2.moments(contour)
+                    if moments['m00'] == 0:
+                        continue
+                    new_loc = [
+                        max(0, min(self.bsize[0] - 1, int(moments['m10'] / moments['m00']))),
+                        max(0, min(self.bsize[1] - 1, int(moments['m01'] / moments['m00']))),
+                    ]
+
+                    # if shape filter enabled - filter out contours that dont match the shape
+                    if self.piece_diff_method == 'shape':
+                        all_shape_scores = []
+                        curr_player_idx = list(self.piece_values).index(player)
+                        for shape_player in self.piece_values:
+                            ref = self.piece_values[shape_player]['shape_values']
+                            score = cv2.matchShapes(contour, ref, cv2.CONTOURS_MATCH_I2, 0.0)
+                            all_shape_scores.append(score)
+                        best_score_idx = np.argmin(all_shape_scores)
+                        if ((all_shape_scores[best_score_idx] >= 0.25) or (best_score_idx != curr_player_idx)):
+                            continue
+
+                    locations.append(new_loc)
+
+            # discretize the locations
+            pieceLocs[player] = []
+            for loc in locations:
+                new_loc = [
+                    loc[0] // cell_size[0],
+                    loc[1] // cell_size[1]
+                ]
+                if loc not in pieceLocs[player]:
+                    pieceLocs[player].append(loc)
 
         return pieceLocs
 
-    def get_game_piece_locations(self, board_img):
-        hsvFrame = cv2.cvtColor(board_img, cv2.COLOR_BGR2HSV)
-        orange_lower = np.array([10, 140, 140], np.uint8)
-        orange_upper = np.array([25, 255, 255], np.uint8)
+    # def detect_game_pieces_by_color(self, hsvFrame, color_values):
+    #     pieceLocs = {}
+    #     for player in color_values:
+    #         pieceLocs[player] = []
 
-        piece_locs = self.detect_game_piece(hsvFrame, orange_lower, orange_upper)
+    #         lower_color, upper_color =  color_values[player]
+    #         mask = cv2.inRange(hsvFrame, lower_color, upper_color)
+    #         mask = cv2.dilate(mask, np.ones((5, 5), "uint8"))
+    #         contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    #         for i, contour in enumerate(contours):
+    #             area = cv2.contourArea(contour)
+    #             if area > 1000:
+    #                 x, y, w, h = cv2.boundingRect(contour)
+    #                 #imageFrame = cv2.rectangle(imageFrame, (x, y), (x + w, y + h), (0, 0, 255), 2)
+    #                 new_loc = [(x + w // 2), (y + h // 2)]
+    #                 if True:
+    #                     flag = False
+    #                     for loc in pieceLocs[player]:
+    #                         if np.linalg.norm([loc[0] - new_loc[0], loc[1] - new_loc[1]]) < 100:
+    #                             flag = True
+    #                             break
+    #                     if not flag:
+    #                         pieceLocs[player].append(new_loc)#'x': x, 'y': y, 'w': w, 'h': h})
+    #                 else:
+    #                     pieceLocs[player].append(new_loc)
 
-        # discretize and
-        final_piece_locs = []
-        for loc in piece_locs:
-            if loc not in final_piece_locs:
-                final_piece_locs.append(loc)
+    #     return pieceLocs
 
-        return final_piece_locs 
-
+    # def detect_game_pieces_by_shape(self, frame):
+    #     pieceLocs = {}
+    #     for player in shape_templates:
+    #         pieceLocs[player] = []
 
 
+    #     mask = cv2.inRange(hsvFrame, lower_color, upper_color)
+    #     mask = cv2.dilate(mask, np.ones((5, 5), "uint8"))
+    #     contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    #     for i, contour in enumerate(contours):
+    #         area = cv2.contourArea(contour)
+    #         if area > 1000:
+    #             x, y, w, h = cv2.boundingRect(contour)
+    #             #imageFrame = cv2.rectangle(imageFrame, (x, y), (x + w, y + h), (0, 0, 255), 2)
+    #             new_loc = [(x + w // 2), (y + h // 2)]
+    #             if True:
+    #                 flag = False
+    #                 for loc in pieceLocs:
+    #                     if np.linalg.norm([loc[0] - new_loc[0], loc[1] - new_loc[1]]) < 100:
+    #                         flag = True
+    #                         break
+    #                 if not flag:
+    #                     pieceLocs.append(new_loc)#'x': x, 'y': y, 'w': w, 'h': h})
+    #             else:
+    #                 pieceLocs.append(new_loc)
+
+    #     return pieceLocs
+
+    # def get_game_piece_locations(self, board_img):
+    #     hsvFrame = cv2.cvtColor(board_img, cv2.COLOR_BGR2HSV)
+
+    #     piece_locs = self.detect_game_pieces_by_color(hsvFrame, orange_lower, orange_upper)
+
+    #     # discretize and
+    #     final_piece_locs = []
+    #     for loc in piece_locs:
+    #         if loc not in final_piece_locs:
+    #             final_piece_locs.append(loc)
+
+    #     return final_piece_locs
 
 
 
-class Tic_Tac_Toe_CV:
-
-    def __init__(self, robot_piece = 'x', debug = False):
-        self.ROBOT_PIECE = robot_piece
-        self.board_dims = (3, 3)
-        self.BOARD = np.full(self.board_dims, ' ')
-        self.debug = debug
 
 
-    def reset_board(self):
-        self.BOARD = np.full(self.board_dims, ' ')
+# sample usage
+def main():
+    img = None
+    orange_lower = np.array([10, 140, 140], np.uint8)
+    orange_upper = np.array([25, 255, 255], np.uint8)
+    cv_obj = Generic_Board_Game_CV(
+        board_dims = (3, 3),
+        initial_image = img,
+        piece_diff_method = 'color',
+        piece_values = {
+            'robot': {
+                'label': 'x',
+                'color_values': [orange_lower, orange_upper],
+                'shape_values': 'oval'
+            },
+            'human': {
+                'label': 'o',
+                'color_values': [orange_lower, orange_upper],
+                'shape_values': 'oval'
+            }
+        },
+        debug = False
+    )
 
     
 
