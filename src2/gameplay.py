@@ -2,7 +2,7 @@ import cv2, os, time
 import numpy as np
 from tic_tac_toe_logic_v2 import tic_tac_toe_logic_v2, check_win_condition
 from path_planning import find_and_execute_path
-# from hardware_setup import *
+from hardware_setup import *
 from cv_functions import *
 
 ROBOT_PIECE = 'o'
@@ -18,14 +18,14 @@ imgs = list(filter(lambda x: x.endswith('jpg'), os.listdir('..')))
 def main():
 
     # initialize all hardware
-    # hardware = initializeAllHardware()
-    # if None in hardware.values():
-    #     print('ERROR: value set to None - this is bad')
-    #     closeEverything(hardware)
-    #     return None
+    hardware = initializeAllHardware()
+    if None in hardware.values():
+        print('ERROR: value set to None - this is bad')
+        closeEverything(hardware)
+        return None
 
-    # hardware = defineEncoderLimits(hardware, axis='X')
-    # hardware = defineEncoderLimits(hardware, axis='Y')
+    hardware = defineEncoderLimits(hardware, axis='X')
+    hardware = defineEncoderLimits(hardware, axis='Y')
 
     orange_lower = np.array([10, 140, 140], np.uint8)
     orange_upper = np.array([25, 255, 255], np.uint8)
@@ -61,7 +61,6 @@ def main():
 
         # TODO - click pic and get current board state with piece locations
         # board_img = None
-        print(cv_obj.BOARD)
 
         # update board state
         cv_obj.update_board_state(board_img)
@@ -81,8 +80,7 @@ def main():
 
         cv_obj.BOARD[next_move_position] = ROBOT_PIECE
 
-        print(cv_obj.BOARD)
-        continue
+
 
         # translate position to location
         print('computing real world location of next best move')
