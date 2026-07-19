@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import cv2, os, time, scipy
 from constants import *
 
@@ -10,16 +11,17 @@ class Generic_Board_Game_CV:
         self.piece_diff_method = piece_diff_method
         self.piece_values = piece_values
 
-        self.bsize = (BOARD_SQUARE_SIZE * 100, BOARD_SQUARE_SIZE * 100)
+        self.bsize = (BOARD_SQUARE_SIZE[0] * 100, BOARD_SQUARE_SIZE[1] * 100)
 
         self.BOARD = np.full(self.board_dims, '')
-        corners = self.determine_board_corners_3(initial_image)
-        self.M = self.compute_perspective_transform_matrix(corners)
+        self.update_board_state(initial_image, reinitialize = True)
 
 
     def reset_board(self):
         self.BOARD = np.full(self.board_dims, '')
 
+    def get_board(self):
+        return self.BOARD
 
     def update_board_state(self, frame, reinitialize = False):
         # recompute M if board moves significantly
@@ -31,10 +33,9 @@ class Generic_Board_Game_CV:
 
         piece_locs = self.detect_game_pieces(board_img)
         for player, loc in piece_locs.items():
-            if self.BOARD[loc] not in ['', self.piece_values[player]['label']]:
-                print('possible error?')
+            # if self.BOARD[loc] not in ['', self.piece_values[player]['label']]:
+            #     print('possible error?')
             self.BOARD[loc] = self.piece_values[player]['label']
-
 
     def determine_board_corners_3(self, frame, outlier_thresh = 1.5):
         num_corners = (self.board_dims[0] + 1) * (self.board_dims[1] + 1)
@@ -160,132 +161,10 @@ class Generic_Board_Game_CV:
                     loc[0] // cell_size[0],
                     loc[1] // cell_size[1]
                 ]
-                if loc not in pieceLocs[player]:
-                    pieceLocs[player].append(loc)
+                if new_loc not in pieceLocs[player]:
+                    pieceLocs[player].append(new_loc)
 
         return pieceLocs
-
-    # def detect_game_pieces_by_color(self, hsvFrame, color_values):
-    #     pieceLocs = {}
-    #     for player in color_values:
-    #         pieceLocs[player] = []
-
-    #         lower_color, upper_color =  color_values[player]
-    #         mask = cv2.inRange(hsvFrame, lower_color, upper_color)
-    #         mask = cv2.dilate(mask, np.ones((5, 5), "uint8"))
-    #         contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    #         for i, contour in enumerate(contours):
-    #             area = cv2.contourArea(contour)
-    #             if area > 1000:
-    #                 x, y, w, h = cv2.boundingRect(contour)
-    #                 #imageFrame = cv2.rectangle(imageFrame, (x, y), (x + w, y + h), (0, 0, 255), 2)
-    #                 new_loc = [(x + w // 2), (y + h // 2)]
-    #                 if True:
-    #                     flag = False
-    #                     for loc in pieceLocs[player]:
-    #                         if np.linalg.norm([loc[0] - new_loc[0], loc[1] - new_loc[1]]) < 100:
-    #                             flag = True
-    #                             break
-    #                     if not flag:
-    #                         pieceLocs[player].append(new_loc)#'x': x, 'y': y, 'w': w, 'h': h})
-    #                 else:
-    #                     pieceLocs[player].append(new_loc)
-
-    #     return pieceLocs
-
-    # def detect_game_pieces_by_shape(self, frame):
-    #     pieceLocs = {}
-    #     for player in shape_templates:
-    #         pieceLocs[player] = []
-
-
-    #     mask = cv2.inRange(hsvFrame, lower_color, upper_color)
-    #     mask = cv2.dilate(mask, np.ones((5, 5), "uint8"))
-    #     contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    #     for i, contour in enumerate(contours):
-    #         area = cv2.contourArea(contour)
-    #         if area > 1000:
-    #             x, y, w, h = cv2.boundingRect(contour)
-    #             #imageFrame = cv2.rectangle(imageFrame, (x, y), (x + w, y + h), (0, 0, 255), 2)
-    #             new_loc = [(x + w // 2), (y + h // 2)]
-    #             if True:
-    #                 flag = False
-    #                 for loc in pieceLocs:
-    #                     if np.linalg.norm([loc[0] - new_loc[0], loc[1] - new_loc[1]]) < 100:
-    #                         flag = True
-    #                         break
-    #                 if not flag:
-    #                     pieceLocs.append(new_loc)#'x': x, 'y': y, 'w': w, 'h': h})
-    #             else:
-    #                 pieceLocs.append(new_loc)
-
-    #     return pieceLocs
-
-    # def get_game_piece_locations(self, board_img):
-    #     hsvFrame = cv2.cvtColor(board_img, cv2.COLOR_BGR2HSV)
-
-    #     piece_locs = self.detect_game_pieces_by_color(hsvFrame, orange_lower, orange_upper)
-
-    #     # discretize and
-    #     final_piece_locs = []
-    #     for loc in piece_locs:
-    #         if loc not in final_piece_locs:
-    #             final_piece_locs.append(loc)
-
-    #     return final_piece_locs
-
-
-
-
-
-# sample usage
-def main():
-    img = None
-    orange_lower = np.array([10, 140, 140], np.uint8)
-    orange_upper = np.array([25, 255, 255], np.uint8)
-    cv_obj = Generic_Board_Game_CV(
-        board_dims = (3, 3),
-        initial_image = img,
-        piece_diff_method = 'color',
-        piece_values = {
-            'robot': {
-                'label': 'x',
-                'color_values': [orange_lower, orange_upper],
-                'shape_values': 'oval'
-            },
-            'human': {
-                'label': 'o',
-                'color_values': [orange_lower, orange_upper],
-                'shape_values': 'oval'
-            }
-        },
-        debug = False
-    )
-
-    
-
-    
-
-    
-    
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -309,6 +188,8 @@ def main():
     # look at the picture to get the board state
     # get perspective transform from board to get current location of 
 
+
+
 def clickPicture(cap, count = 1, saveimg = False):
     res, frame = cap.read()
     if res:
@@ -325,4 +206,62 @@ def clickPicture(cap, count = 1, saveimg = False):
             print('ERROR: camera error. pic not clicked even after 3 attempts. sadge')
             return None
 
+def generate_shape_template(shape_name, shape_img = None):
+    if shape_img is None:
+        template_size = 200
+        res = np.zeros((template_size, template_size), dtype = np.uint8)
+        if shape_name == 'oval':
+            cv2.ellipse(res, (template_size // 2, template_size // 2), (75, 40), 0, 0, 360, 255, -1)
+        elif shape_name == 'cross':
+            cv2.rectangle(res, (template_size // 2 - 20, 20), (template_size // 2 + 20, template_size - 20), 255, -1)
+            cv2.rectangle(res, (20, template_size // 2 - 20), (template_size - 20, template_size // 2 + 20), 255, -1)
+            res = cv2.warpAffine(
+                res,
+                cv2.getRotationMatrix2D((template_size // 2, template_size // 2), 45, 1.0),
+                (template_size, template_size)
+            )
+
+    else:
+        _, res = cv2.threshold(shape_img, 127, 255, cv2.THRESH_BINARY)
+    contours, _ = cv2.findContours(res, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    return contours[0]
+
+
+
+# sample usage
+def main():
+    imgs = list(filter(lambda x: x.endswith('jpg'), os.listdir('.')))
+
+    for i in imgs:
+        board_img = cv2.imread(f'./{i}')
+        robot_shape_img = None#cv2.imread(f'./oval_template.png', 0)
+
+        orange_lower = np.array([10, 140, 140], np.uint8)
+        orange_upper = np.array([25, 255, 255], np.uint8)
+        cyan_lower = np.array([10, 140, 140], np.uint8)
+        cyan_upper = np.array([25, 255, 255], np.uint8)
+
+        cv_obj = Generic_Board_Game_CV(
+            board_dims = (3, 3),
+            initial_image = board_img,
+            piece_diff_method = 'color',
+            piece_values = {
+                'robot': {
+                    'label': 'x',
+                    'color_values': [orange_lower, orange_upper],
+                    'shape_values': generate_shape_template('oval', shape_img = robot_shape_img)
+                },
+                'human': {
+                    'label': 'o',
+                    'color_values': [cyan_lower, cyan_upper],
+                    'shape_values': generate_shape_template('oval')
+                }
+            },
+            debug = False
+        )
+        print(cv_obj.BOARD)
+        plt.imshow(board_img)
+        plt.show()
+
+main()
 
