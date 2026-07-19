@@ -101,9 +101,7 @@ def apply_smooth_interp(p1, p2, min_jerk = True):
         disp_traj = np.linspace(p1, p2, len(t_rel))
 
     return disp_traj
-    
 
-    
 
 # pieces will be kept at opposite sides - bot only responsible to pick up a specific side
 def find_and_execute_path(new_location, hardware):

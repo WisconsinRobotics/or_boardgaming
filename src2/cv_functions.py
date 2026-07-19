@@ -1,5 +1,209 @@
 import numpy as np
-import cv2, os, time
+import cv2, os, time, scipy
+from constants import *
+
+class Generic_Board_Game_CV:
+    def __init__(self, robot_piece, human_piece, board_dims, initial_image, debug = False):
+        self.ROBOT_PIECE = robot_piece
+        self.HUMAN_PIECE = human_piece
+
+        self.board_dims = board_dims
+        self.BOARD = np.full(self.board_dims, '')
+        self.debug = debug
+
+        self.bsize = BOARD_SQUARE_SIZE * 100
+
+        corners = self.determine_board_corners_3(initial_image)
+        self.M = self.compute_perspective_transform_matrix(corners)
+
+
+    def reset_board(self):
+        self.BOARD = np.full(self.board_dims, '')
+
+    # def update_board(self, new_pos, new_piece):
+    #     assert len(new_pos) == 2, 'invalid position'
+    #     assert self.BOARD[new_pos] == new_piece, 'position already occupied'
+
+    #     self.BOARD[new_pos] = new_piece
+    #     if self.debug:
+    #         print(f'Piece {new_piece} added to board position {new_pos}')
+
+    
+    def update_board_state(self, frame, reinitialize = False):
+        # recompute M if board moves significantly
+        if reinitialize:
+            corners = self.determine_board_corners_3(frame)
+            self.M = self.compute_perspective_transform_matrix(corners)
+
+        board_img = cv2.warpPerspective(frame, self.M, (self.bsize, self.bsize))
+        
+        piece_locs = []
+        for loc in piece_locs:
+            self.BOARD[loc] = self.ROBOT_PIECE
+
+    
+
+
+    
+
+    def determine_board_corners_3(self, frame, outlier_thresh = 1.5):
+        num_corners = (self.board_dims[0] + 1) * (self.board_dims[1] + 1)
+
+        # make it greyscale
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        ret,thresh = cv2.threshold(gray,50,255,cv2.THRESH_BINARY)
+
+        # find the biggest contour and make that into a mask (should filter it to only the board)
+        contours,hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        max_contour = max(contours, key = cv2.contourArea)
+        mask = np.zeros_like(gray)
+        cv2.drawContours(mask, [max_contour], -1, 255, -1)
+
+        # find best features (ie points) in the masked greyscale image
+        corners = cv2.goodFeaturesToTrack(gray, num_corners, 0.01, 10, mask = mask)
+        corners = np.float32(np.intp(corners).reshape(num_corners, 2))
+
+        # filter out outliers
+        filtered_corners = self.filter_outliers_2(corners, thresh = outlier_thresh)
+
+        # get bounding points
+        if True:
+            final_corners = np.float32(cv2.boxPoints(cv2.minAreaRect(filtered_corners)))
+        else:
+            hull = cv2.convexHull(filtered_corners)
+            epsilon = 0.04 * cv2.arcLength(hull, closed = True)
+            final_corners = cv2.approxPolyDP(hull, epsilon, closed = True).reshape(-1, 2)
+
+        # TODO - use bounding lines instead
+
+        return final_corners
+    
+    def filter_outliers_2(self, corners, thresh = 1.5):
+        '''
+        filter out the outliers in the points detected on the board
+        '''
+        # using kdtree to get 3rd nearest neighbor n if its too far away then filter it out
+        # will filter out any scattered outliers and upto {clustered_outlier_count_thresh} clustered outliers
+        # ie so say clustered_outlier_count_thresh = 3, and there are 3 outliers that are really close to each other
+        # but are otherwise far away from every other point in the grid, they will still get filtered out
+
+        # cannot be higher than (n1 + n2 + 1) for n1,n2 = dim of points in grid
+        # so for tictactoe thats 4 + 4 + 1 = 9
+        # 4 is a good default value
+        clustered_outlier_count_thresh = 4
+        assert clustered_outlier_count_thresh < ((self.board_dims[0] + 1 + self.board_dims[1] + 1) + 1)
+        if len(corners) < 4:
+            return corners
+
+        tree = scipy.spatial.KDTree(corners)
+        distances, _ = tree.query(corners, k = clustered_outlier_count_thresh)
+        nearest_pt_dist = distances[:, clustered_outlier_count_thresh - 1]
+        non_outlier_mask = nearest_pt_dist < (thresh * np.median(nearest_pt_dist))
+        return corners[non_outlier_mask]
+
+    def fix_corner_order(self, corners):
+        # sort corners by angle from center
+        cx, cy = np.mean(corners, axis = 0)
+        angles = np.arctan2(corners[:, 1] - cy, corners[:, 0] - cx)
+        ordered_corners = corners[np.argsort(angles)]
+        # using np roll to start with top left
+        return np.roll(ordered_corners, -np.argmin(np.sum(ordered_corners, axis = 1)), axis = 0).astype('float32')
+
+    def compute_perspective_transform_matrix(self, corners):
+        actual_dims = np.float32([
+            [0, 0],
+            [self.bsize - 1, 0],
+            [self.bsize - 1, self.bsize - 1],
+            [0, self.bsize - 1]
+        ])
+        # reorder corners if not in correct order
+        ordered_corners = self.fix_corner_order(corners)
+        # get M
+        M = cv2.getPerspectiveTransform(ordered_corners, actual_dims)
+        return M
+
+    def detect_game_pieces(self, hsvFrame, lower_color, upper_color):
+        pieceLocs = []
+        mask = cv2.inRange(hsvFrame, lower_color, upper_color)
+        mask = cv2.dilate(mask, np.ones((5, 5), "uint8"))
+        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for i, contour in enumerate(contours):
+            area = cv2.contourArea(contour)
+            if area > 1000:
+                x, y, w, h = cv2.boundingRect(contour)
+                #imageFrame = cv2.rectangle(imageFrame, (x, y), (x + w, y + h), (0, 0, 255), 2)
+                new_loc = [(x + w // 2), (y + h // 2)]
+                if True:
+                    flag = False
+                    for loc in pieceLocs:
+                        if np.linalg.norm([loc[0] - new_loc[0], loc[1] - new_loc[1]]) < 100:
+                            flag = True
+                            break
+                    if not flag:
+                        pieceLocs.append(new_loc)#'x': x, 'y': y, 'w': w, 'h': h})
+                else:
+                    pieceLocs.append(new_loc)
+
+        return pieceLocs
+
+    def get_game_piece_locations(self, board_img):
+        hsvFrame = cv2.cvtColor(board_img, cv2.COLOR_BGR2HSV)
+        orange_lower = np.array([10, 140, 140], np.uint8)
+        orange_upper = np.array([25, 255, 255], np.uint8)
+
+        piece_locs = self.detect_game_piece(hsvFrame, orange_lower, orange_upper)
+
+        # discretize and
+        final_piece_locs = []
+        for loc in piece_locs:
+            if loc not in final_piece_locs:
+                final_piece_locs.append(loc)
+
+        return final_piece_locs 
+
+
+
+
+
+
+class Tic_Tac_Toe_CV:
+
+    def __init__(self, robot_piece = 'x', debug = False):
+        self.ROBOT_PIECE = robot_piece
+        self.board_dims = (3, 3)
+        self.BOARD = np.full(self.board_dims, ' ')
+        self.debug = debug
+
+
+    def reset_board(self):
+        self.BOARD = np.full(self.board_dims, ' ')
+
+    
+
+    
+
+    
+    
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # strats
 # pros of perspective transform
@@ -36,134 +240,5 @@ def clickPicture(cap, count = 1, saveimg = False):
         else:
             print('ERROR: camera error. pic not clicked even after 3 attempts. sadge')
             return None
-
-
-class Tic_Tac_Toe_CV:
-    BOARD = np.array([
-        ['', '', ''],
-        ['', '', ''],
-        ['', '', ''],
-    ])
-
-    BOARD_SQUARE_SIZE = 2 # irl size of each square on board in inches
-
-    def __init__(self, robot_piece = 'x'):
-        self.ROBOT_PIECE = robot_piece
-        self.reset_board()
-
-    def reset_board(self):
-        self.BOARD = np.array([
-            ['', '', ''],
-            ['', '', ''],
-            ['', '', ''],
-        ])
-
-    def update_board(self, new_pos, new_piece):
-        assert len(new_pos) == 2, 'invalid position'
-        assert self.BOARD[new_pos] == '', 'position already occupied'
-        self.BOARD[new_pos] = new_piece
-
-    def getPerspectiveTransform(self, corners):
-        actual_dims = np.float32([
-            [0, 0],
-            [self.BOARD_SQUARE_SIZE, 0],
-            [0, self.BOARD_SQUARE_SIZE],
-            [self.BOARD_SQUARE_SIZE, self.BOARD_SQUARE_SIZE]
-        ])
-        M = cv2.getPerspectiveTransform(corners, actual_dims)
-        return M
-
-
-
-
-def detect_locations(hsvFrame, lower_color, upper_color):
-    pieceLocs = []
-    mask = cv2.inRange(hsvFrame, lower_color, upper_color)
-    kernel = np.ones((5, 5), "uint8")
-    mask = cv2.dilate(mask, kernel)
-    contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    for i, contour in enumerate(contours):
-        area = cv2.contourArea(contour)
-        if area > 1000:
-            x, y, w, h = cv2.boundingRect(contour)
-            #imageFrame = cv2.rectangle(imageFrame, (x, y), (x + w, y + h), (0, 0, 255), 2)
-            new_loc = [(x + w // 2), (y + h // 2)]
-            if True:
-                flag = False
-                for loc in pieceLocs:
-                    if np.linalg.norm([loc[0] - new_loc[0], loc[1] - new_loc[1]]) < 100:
-                        flag = True
-                        break
-                if not flag:
-                    pieceLocs.append(new_loc)#'x': x, 'y': y, 'w': w, 'h': h})
-            else:
-                pieceLocs.append(new_loc)
-
-    return pieceLocs
-
-def detectBoardPieceLocations(imageFrame):
-
-    hsvFrame = cv2.cvtColor(imageFrame, cv2.COLOR_BGR2HSV)
-    
-    # Test the color limits to make sure they identify the blue and orange pieces
-    orange_lower = np.array([10, 140, 140], np.uint8)
-    orange_upper = np.array([25, 255, 255], np.uint8)
-    blue_lower = np.array([110, 100, 100], np.uint8)
-    blue_upper = np.array([160, 255, 255], np.uint8)
-    
-    pieceLocs = {}
-    pieceLocs['orange'] = detect_locations(hsvFrame, orange_lower, orange_upper)
-    pieceLocs['blue'] = detect_locations(hsvFrame, blue_lower, blue_upper)
-
-    return pieceLocs
-
-def determineBoardCorners(frame):
-    # Our operations on the frame come here
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    ### getting contours in image ###
-    # includes all values above 100
-    # basically turns image into binary white/black depending on value
-    ret,thresh = cv2.threshold(gray,100,255,cv2.THRESH_BINARY)
-
-    contours,hierarchy = cv2.findContours(thresh, 1, 2)
-    cnt = np.float32(contours[0])
-    #v2.drawContours(frame, contours, -1, (0,255,0), 2)
-
-    ### detects corners ###
-    # right now only tracks 4 at a time i think
-    corners = cv2.goodFeaturesToTrack(gray,40,0.01,10)
-    corners = np.intp(corners) # array of corners?
-
-    # # if corner is within board line contours, add it to board corner array
-    # board_corners = []
-    # for i in corners:
-    #     x = int(i[0][0])
-    #     y = int(i[0][1])
-    #     dist = cv2.pointPolygonTest(cnt,(x,y),True)
-    #     if dist:
-    #         board_corners.append(i[0])
-
-    # # finding min and max corners
-    # max = [0,0]
-    # min = [1000,1000]
-    # for i in board_corners:
-    #     x = int(i[0])
-    #     y = int(i[1])
-    #     if (x < min[0]) and (y < min[1]):
-    #         min = i
-    #     if(x > max[0]) and (y > max[1]):
-    #         max = i
-
-    # # calculating size of each square on board
-    # width_x = max[0] - min[0]
-    # height_y = max[1] - min[1]
-
-    # # draws circle for each corner
-    # for i in corners:
-    #     x,y = i.ravel()
-    #     cv2.circle(frame,(x,y),3,(0,0,255),-1)
-
-    return np.float32(corners.reshape(40,2))
 
 

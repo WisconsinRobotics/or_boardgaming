@@ -31,3 +31,5 @@ MOTOR_SPEED = 0.4
 COMMAND_FREQUENCY = 20 # 20 hz so 0.05 s
 
 APPROX_GANTRY_DIMS_IN_CM =  50 # 100 # 19.5 in
+
+BOARD_SQUARE_SIZE = 6 # irl size of total board in inches
