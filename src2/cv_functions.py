@@ -32,10 +32,11 @@ class Generic_Board_Game_CV:
         board_img = cv2.warpPerspective(frame, self.M, (self.bsize[0], self.bsize[1]))
 
         piece_locs = self.detect_game_pieces(board_img)
-        for player, loc in piece_locs.items():
+        for player, locs in piece_locs.items():
             # if self.BOARD[loc] not in ['', self.piece_values[player]['label']]:
             #     print('possible error?')
-            self.BOARD[loc] = self.piece_values[player]['label']
+            for loc in locs:
+                self.BOARD[loc[1], loc[0]] = self.piece_values[player]['label']
 
     def determine_board_corners_3(self, frame, outlier_thresh = 1.5):
         num_corners = (self.board_dims[0] + 1) * (self.board_dims[1] + 1)
@@ -163,6 +164,8 @@ class Generic_Board_Game_CV:
                 ]
                 if new_loc not in pieceLocs[player]:
                     pieceLocs[player].append(new_loc)
+            if len(pieceLocs[player]) == 0:
+                pieceLocs.pop(player, None)
 
         return pieceLocs
 
@@ -230,16 +233,16 @@ def generate_shape_template(shape_name, shape_img = None):
 
 # sample usage
 def main():
-    imgs = list(filter(lambda x: x.endswith('jpg'), os.listdir('.')))
+    imgs = list(filter(lambda x: x.endswith('jpg'), os.listdir('..')))
 
     for i in imgs:
-        board_img = cv2.imread(f'./{i}')
-        robot_shape_img = None#cv2.imread(f'./oval_template.png', 0)
+        board_img = cv2.imread(f'../{i}')
+        robot_shape_img = cv2.imread(f'../oval_template.png', 0)
 
         orange_lower = np.array([10, 140, 140], np.uint8)
         orange_upper = np.array([25, 255, 255], np.uint8)
-        cyan_lower = np.array([10, 140, 140], np.uint8)
-        cyan_upper = np.array([25, 255, 255], np.uint8)
+        cyan_lower = np.array([85, 140, 140], np.uint8)
+        cyan_upper = np.array([100, 255, 255], np.uint8)
 
         cv_obj = Generic_Board_Game_CV(
             board_dims = (3, 3),
@@ -247,14 +250,14 @@ def main():
             piece_diff_method = 'color',
             piece_values = {
                 'robot': {
-                    'label': 'x',
+                    'label': 'o',
                     'color_values': [orange_lower, orange_upper],
                     'shape_values': generate_shape_template('oval', shape_img = robot_shape_img)
                 },
                 'human': {
-                    'label': 'o',
+                    'label': 'x',
                     'color_values': [cyan_lower, cyan_upper],
-                    'shape_values': generate_shape_template('oval')
+                    'shape_values': generate_shape_template('cross')
                 }
             },
             debug = False
@@ -263,5 +266,5 @@ def main():
         plt.imshow(board_img)
         plt.show()
 
-main()
+# main()
 
