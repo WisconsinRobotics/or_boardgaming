@@ -3,7 +3,6 @@
 from gpiozero import PhaseEnableMotor, OutputDevice, RotaryEncoder, DigitalInputDevice
 from constants import *
 from limit import *
-from claw import *
 import time
 
 class Gantry():
@@ -28,10 +27,6 @@ class Gantry():
         self.X_ENCODER = RotaryEncoder(*X_ENCODER_PINS, max_steps=0)
         self.Y_ENCODER = RotaryEncoder(*Y_ENCODER_PINS, max_steps=0)
         print('Encoders successfully setup')
-
-        print('Starting claw setup')
-        self.claw = Claw()
-        print('Claw sucessfully setup')
       
     def home_y(self, speed=0.3):
         self.EN.on()
@@ -133,9 +128,9 @@ class Gantry():
         print(f"Arrival confirmed at actual position: X={self.X_ENCODER.steps}, Y={self.Y_ENCODER.steps}")
         self.EN.off()
 
-    def pickup(self):
-        self.claw.pick_piece()
+    def move_to_board_cell(self, row, col):
+        target_x = BOARD_X_OFFSET + row * BOARD_SQUARE_SIZE[0]/3 + BOARD_SQUARE_SIZE[0]/6 - CLAW_X_OFFSET
+        target_y = BOARD_Y_OFFSET + col * BOARD_SQUARE_SIZE[1]/3 + BOARD_SQUARE_SIZE[1]/6 - CLAW_Y_OFFSET
+        self.move_to_coordinate(target_x, target_y)
+        
 
-    def drop(self):
-        self.claw.drop_piece()
-    

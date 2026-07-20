@@ -7,9 +7,10 @@ from path_planning import find_and_execute_path
 if not SAMPLE_TEST:
     from hardware_setup import *
 from cv_functions import *
+from camera import *
+from gantry import *
 
-ROBOT_PIECE = 'o'
-HUMAN_PIECE = 'x'
+
 imgs = list(filter(lambda x: x.endswith('jpg'), os.listdir('..')))
 
 # colors:
@@ -23,36 +24,25 @@ imgs = list(filter(lambda x: x.endswith('jpg'), os.listdir('..')))
 def main():
     if not SAMPLE_TEST:
         # initialize all hardware
-        hardware = initializeAllHardware()
-        if None in hardware.values():
-            print('ERROR: value set to None - this is bad')
-            closeEverything(hardware)
-            return None
-
-        hardware = defineEncoderLimits(hardware, axis='X')
-        hardware = defineEncoderLimits(hardware, axis='Y')
-
-    orange_lower = np.array([10, 140, 140], np.uint8)
-    orange_upper = np.array([25, 255, 255], np.uint8)
-    cyan_lower = np.array([85, 140, 140], np.uint8)
-    cyan_upper = np.array([100, 255, 255], np.uint8)
+        camera = Camera()
+        gantry = Gantry()
 
     board_img = cv2.imread(f'../{imgs[6]}')
     robot_shape_img = cv2.imread(f'../oval_template.png', 0)
 
     cv_obj = Generic_Board_Game_CV(
             board_dims = (3, 3),
-            initial_image = board_img,
+            initial_image = INITIAL_BOARD_IMG,
             piece_diff_method = 'color',
             piece_values = {
                 'robot': {
                     'label': 'o',
-                    'color_values': [orange_lower, orange_upper],
-                    'shape_values': generate_shape_template('oval', shape_img = robot_shape_img)
+                    'color_values': [ORANGE_LOWER, ORANGE_UPPER],
+                    'shape_values': generate_shape_template('oval', shape_img = ROBOT_SHAPE_IMG)
                 },
                 'human': {
                     'label': 'x',
-                    'color_values': [cyan_lower, cyan_upper],
+                    'color_values': [GREY_LOWER, GREY_UPPER],
                     'shape_values': generate_shape_template('cross')
                 }
             },
@@ -68,10 +58,11 @@ def main():
 
         # wait until button press - ie human turn end and bot turn start
         print('\nwaiting for button to be pressed to start robot turn')
+        input("Press Enter for robot's turn")
         #hardware['TURN_INDICATOR_BUTTON'].wait_for_press()
 
         # TODO - click pic and get current board state with piece locations
-        # board_img = None
+        board_img = camera.clickPicture()
 
         # update board state
         cv_obj.update_board_state(board_img)
@@ -95,17 +86,18 @@ def main():
         if SAMPLE_TEST:
             continue
         # translate position to location
-        print('computing real world location of next best move')
-        next_move_world_location = translate_position_to_location(next_move_position)
+        #print('computing real world location of next best move')
+        #next_move_world_location = translate_position_to_location(next_move_position)
 
         # can be a safety thing? wait until button released and child has stepped back before motors do things
-        if hardware['TURN_INDICATOR_BUTTON'].is_pressed:
-            print('waiting for button release if not already done before starting motors')
-            hardware['TURN_INDICATOR_BUTTON'].wait_for_release()
+        #if hardware['TURN_INDICATOR_BUTTON'].is_pressed:
+        #    print('waiting for button release if not already done before starting motors')
+        #    hardware['TURN_INDICATOR_BUTTON'].wait_for_release()
 
         # TODO - get and execute path to accomplish next best move
         print('computing and executing next best move')
-        find_and_execute_path(next_move_world_location)
+        gantry.move_to_cell(next_move_position[0], next_move_position[1])
+        #find_and_execute_path(next_move_world_location)
 
     # closeEverything(hardware)
 

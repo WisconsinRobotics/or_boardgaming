@@ -16,7 +16,7 @@ class Camera:
     def __del__(self):
         if not (self.CAMERA is None) and self.CAMERA.isOpened():
             self.CAMERA.release()
-            cv2.destroyAllWindows()
+        cv2.destroyAllWindows()
 
     def clickPicture(self, count = 1, saveimg = True):
         res, frame = self.CAMERA.read()
