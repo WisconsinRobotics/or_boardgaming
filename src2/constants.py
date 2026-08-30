@@ -19,10 +19,10 @@ CLAW_X_OFFSET = 4.75 - .5 # from screw sticking out when hitting limit switch -
 CLAW_Y_OFFSET = 0.85 # from roller when hitting limit switch -
 
 BOARD_EDGE_OFFSET_FROM_OUTLINE_INCH = 0.75
-BOARD_X_OFFSET_INCH = 6.25 + BOARD_EDGE_OFFSET_FROM_OUTLINE_INCH # from screw sticking out when hitting limit switch -
-BOARD_Y_OFFSET_INCH = 0 + BOARD_EDGE_OFFSET_FROM_OUTLINE_INCH # from roller when hitting limit switch -
+BOARD_X_OFFSET = 6.25 + BOARD_EDGE_OFFSET_FROM_OUTLINE_INCH # from screw sticking out when hitting limit switch -
+BOARD_Y_OFFSET = 0 + BOARD_EDGE_OFFSET_FROM_OUTLINE_INCH # from roller when hitting limit switch -
 
-OFFSET_X_INCH = BOARD_X_OFFSET_FROM_LIMIT_SWITCH_INCH + BOARD_EDGE_OFFSET_FROM_OUTLINE_INCH
+#OFFSET_X_INCH = BOARD_X_OFFSET_FROM_LIMIT_SWITCH_INCH + BOARD_EDGE_OFFSET_FROM_OUTLINE_INCH
 DEADZONE_STEPS = 0.1 * STEPS_PER_INCH
 
 # CV constants
@@ -31,9 +31,11 @@ OUTLINE_LENGTH_INCH = BOARD_SQUARE_SIZE[0]
 APPROX_GANTRY_DIMS_IN_CM = 50 # 100 # 19.5 in
 ORANGE_LOWER = np.array([10, 140, 140], np.uint8)
 ORANGE_UPPER = np.array([25, 255, 255], np.uint8)
+YELLOW_LOWER = np.array([238, 201, 48], np.uint8)
+YELLOW_UPPER = np.array([253, 213, 51], np.uint8)
 GREY_LOWER = np.array([85, 140, 140], np.uint8) # TODO: Change this color to grey
 GREY_UPPER = np.array([100, 255, 255], np.uint8)
-INITIAL_BOARD_IMG = cv2.imread(f'../{imgs[6]}')
+INITIAL_BOARD_IMG = cv2.imread(f'../initial_board.jpg')
 ROBOT_SHAPE_IMG = cv2.imread(f'../oval_template.png', 0)
 
 

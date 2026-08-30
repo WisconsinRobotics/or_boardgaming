@@ -75,7 +75,7 @@ class Gantry():
         """Returns current position in inches based on encoder steps."""
         return self.Y_ENCODER.steps / STEPS_PER_INCH
 
-    def move_to_coordinate(self, target_x_inch, target_y_inch, speed=0.3):
+    def move_to_coordinate(self, target_x_inch, target_y_inch, speed=0.8):
         """
         Moves the gantry to a specific (X, Y) coordinate using encoder feedback.
         Assumes units like millimeters or inches based on your STEPS_PER_UNIT configuration.
@@ -133,4 +133,9 @@ class Gantry():
         target_y = BOARD_Y_OFFSET + col * BOARD_SQUARE_SIZE[1]/3 + BOARD_SQUARE_SIZE[1]/6 - CLAW_Y_OFFSET
         self.move_to_coordinate(target_x, target_y)
         
+    def move_to_pickup_piece(self):
+        target_x = BOARD_X_OFFSET - 2.5 - CLAW_X_OFFSET
+        target_y = BOARD_Y_OFFSET + 2 - CLAW_Y_OFFSET
+        print("pick up loc: ", target_x, ", ", target_y)
+        self.move_to_coordinate(target_x, target_y)
 

@@ -1,14 +1,11 @@
-SAMPLE_TEST = True
-
 import cv2, os, time
 import numpy as np
 from tic_tac_toe_logic_v2 import tic_tac_toe_logic_v2, check_win_condition
 from path_planning import find_and_execute_path
-if not SAMPLE_TEST:
-    from hardware_setup import *
 from cv_functions import *
 from camera import *
 from gantry import *
+from claw import *
 
 
 imgs = list(filter(lambda x: x.endswith('jpg'), os.listdir('..')))
@@ -22,33 +19,36 @@ imgs = list(filter(lambda x: x.endswith('jpg'), os.listdir('..')))
 
 
 def main():
-    if not SAMPLE_TEST:
-        # initialize all hardware
-        camera = Camera()
-        gantry = Gantry()
+    # initialize all hardware
+    camera = Camera()
+    gantry = Gantry()
+    claw = Claw()
 
     board_img = cv2.imread(f'../{imgs[6]}')
     robot_shape_img = cv2.imread(f'../oval_template.png', 0)
 
     cv_obj = Generic_Board_Game_CV(
-            board_dims = (3, 3),
-            initial_image = INITIAL_BOARD_IMG,
-            piece_diff_method = 'color',
-            piece_values = {
-                'robot': {
-                    'label': 'o',
-                    'color_values': [ORANGE_LOWER, ORANGE_UPPER],
-                    'shape_values': generate_shape_template('oval', shape_img = ROBOT_SHAPE_IMG)
-                },
-                'human': {
-                    'label': 'x',
-                    'color_values': [GREY_LOWER, GREY_UPPER],
-                    'shape_values': generate_shape_template('cross')
-                }
+        board_dims = (3, 3),
+        initial_image = INITIAL_BOARD_IMG,
+        piece_diff_method = 'color',
+        piece_values = {
+            'robot': {
+                'label': 'o',
+                'color_values': [ORANGE_LOWER, ORANGE_UPPER],
+                'shape_values': generate_shape_template('oval', shape_img = ROBOT_SHAPE_IMG)
             },
-            debug = False
-        )
-    
+            'human': {
+                'label': 'x',
+                'color_values': [YELLOW_LOWER, YELLOW_UPPER],
+                'shape_values': generate_shape_template('cross')
+            }
+        },
+        debug = False
+    )
+
+    gantry.home_x()
+    gantry.home_y()
+    gantry.move_to_pickup_piece()
 
     i = 0
     while True:
@@ -83,8 +83,6 @@ def main():
         cv_obj.BOARD[next_move_position] = ROBOT_PIECE
 
         i += 1
-        if SAMPLE_TEST:
-            continue
         # translate position to location
         #print('computing real world location of next best move')
         #next_move_world_location = translate_position_to_location(next_move_position)
@@ -96,7 +94,11 @@ def main():
 
         # TODO - get and execute path to accomplish next best move
         print('computing and executing next best move')
-        gantry.move_to_cell(next_move_position[0], next_move_position[1])
+        claw.pick_piece()
+        print('moving to ', next_move_position[0], next_move_position[1])
+        gantry.move_to_board_cell(next_move_position[0], next_move_position[1])
+        claw.drop_piece()
+        gantry.move_to_pickup_piece()
         #find_and_execute_path(next_move_world_location)
 
     # closeEverything(hardware)
