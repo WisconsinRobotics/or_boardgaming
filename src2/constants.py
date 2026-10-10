@@ -49,8 +49,11 @@ Z_SERVO_MAX = 2.3/1000
 MOTOR_ENABLE_PIN = 5
 MOTOR_FAULT_PIN = 6
 
-Y_ENCODER_PINS = [8, 7]
-X_ENCODER_PINS = [15, 14]
+# When initializing encoder, B is first arg, A is second arg
+X_ENCODER_A = 8
+X_ENCODER_B = 7
+Y_ENCODER_A = 15
+Y_ENCODER_B = 14
 
 Y_LIMIT_SWITCH_NEG_PIN = 19 # see physical board, marked as S3
 Y_LIMIT_SWITCH_POS_PIN = 26 # marked as S4
