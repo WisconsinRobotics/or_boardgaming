@@ -1,23 +1,18 @@
-import RPi.GPIO as GPIO
 import time
+from gpiozero import Button
 from enum import Enum
 from constants import *
-
-class LIMIT(Enum):
-    X_LIM_NEG = X_LIMIT_SWITCH_NEG_PIN
-    X_LIM_POS = X_LIMIT_SWITCH_POS_PIN
-    Y_LIM_NEG = Y_LIMIT_SWITCH_NEG_PIN
-    Y_LIM_POS = Y_LIMIT_SWITCH_POS_PIN
 
 class LimitManager:
     def __init__(self):
         """Initializes all GPIO pins mapped in the LIMIT Enum."""
-        GPIO.setmode(GPIO.BCM)
-        for limit in LIMIT:
-            GPIO.setup(limit.value, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            print(f"Initialized limit switch {limit.name} on pin {limit.value}")
+        self._map = {}
+        self._map[X_LIMIT_SWITCH_NEG_PIN] = Button(X_LIMIT_SWITCH_NEG_PIN, pull_up=True)
+        self._map[Y_LIMIT_SWITCH_NEG_PIN] = Button(Y_LIMIT_SWITCH_NEG_PIN, pull_up=True)
+        print(f"Initialized limit switchs")
 
-    @classmethod
-    def is_pressed(self, limit: LIMIT) -> bool:
-        """Reads the switch state, ensuring activate_limits() was called first."""
-        return GPIO.input(limit.value) == GPIO.LOW
+    def on_pressed(self, pin: int, callback):
+        """registers callback. NOTE: will override prev callback"""
+        if pin not in self._map:
+            raise ValueError(f"Invalid pin {pin} for registering limit callback")
+        self._map[pin].when_pressed = callback
