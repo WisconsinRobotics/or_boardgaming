@@ -1,6 +1,12 @@
 # To run this file, make sure to run sudo pigpiod beforehand
+import sys
+from pathlib import Path
 
-from gpiozero import PhaseEnableMotor, OutputDevice, RotaryEncoder, DigitalInputDevice
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root))
+from dual_max_motor.dual_max14870_rpi import motors, MAX_SPEED
+
+from gpiozero import OutputDevice, RotaryEncoder, DigitalInputDevice
 from constants import *
 from limit import *
 import time
@@ -14,60 +20,68 @@ class Gantry():
 
         print('Starting motor setup')
 
-        self.EN = OutputDevice(MOTOR_ENABLE_PIN, active_high=False, initial_value=False)
         time.sleep(0.5)
-        self.MOTOR_FAULT = DigitalInputDevice(MOTOR_FAULT_PIN, pull_up=True)
-        self.X_MOTOR = PhaseEnableMotor(X_MOTOR_DIR_PIN, X_MOTOR_PWM_PIN)
-        self.Y_MOTOR = PhaseEnableMotor(Y_MOTOR_DIR_PIN, Y_MOTOR_PWM_PIN)
-
-        time.sleep(0.1)
+        self.Y_MOTOR = motors.motor2
+        self.X_MOTOR = motors.motor1
+        motors.enable()
         print('Motors successfully setup')
 
         print('Starting encoder setup')
-        self.X_ENCODER = RotaryEncoder(*X_ENCODER_PINS, max_steps=0)
-        self.Y_ENCODER = RotaryEncoder(*Y_ENCODER_PINS, max_steps=0)
+        # B before A for direction alignment
+        self.X_ENCODER = RotaryEncoder(X_ENCODER_B, X_ENCODER_A, max_steps = 0)
+        self.Y_ENCODER = RotaryEncoder(Y_ENCODER_B, Y_ENCODER_A, max_steps = 0)
         print('Encoders successfully setup')
-      
+          
+    def __del__(self):
+        motors.setSpeeds(0, 0)
+        motors.disable()
+
     def home_y(self, speed=0.3):
-        self.EN.on()
-        self.Y_MOTOR.backward(speed)
-        while not self.limit.is_pressed(LIMIT.Y_LIM_NEG):
+
+        def on_limit_reached():
+            print("================= y limit reached ====================")
+            self.Y_MOTOR.setSpeed(0)
+            self.Y_ENCODER.value = 0
+            self.Y_MOTOR.forward(MAX_SPEED / 4)
+            start_time = time.time()
+            # keep spinning for 3 seconds
+            time.sleep(3)
+            self.Y_MOTOR.setSpeed(0)
+            self.is_y_homed = True
+
+        self.limit.on_pressed(Y_LIMIT_SWITCH_NEG_PIN, on_limit_reached)
+        print("Callback registered for Y limit switch")
+        self.Y_MOTOR.setSpeed(-MAX_SPEED / 4)
+        print("Y motor moving backward to home position")
+        
+        while not self.is_y_homed:
             print("encoder: ", self.Y_ENCODER.steps)
-            print("fault pin: ", self.MOTOR_FAULT.is_active)
-            print(f"en pin: {self.EN.is_active}" )
-            time.sleep(0.01)
-        self.Y_MOTOR.stop()
-        self.Y_ENCODER.value = 0
+            #print("fault pin: ", self.MOTOR_FAULT.is_active)
+            #print(f"en pin: {self.EN.is_active}" )
+            time.sleep(0.25)
 
-        self.Y_MOTOR.forward(speed)
-        start_time = time.time()
-        # keep spinning for 1 second
-        while (time.time() - start_time) < 3:
-            print(self.get_y_pos_inches())
-            time.sleep(0.1)
-        self.Y_MOTOR.stop()
-        self.is_y_homed = True
-        self.EN.off()
-
+        
     def home_x(self, speed=0.3):
-        self.EN.on()
-        self.X_MOTOR.backward(speed)
-        while not self.limit.is_pressed(LIMIT.X_LIM_NEG):
+        def on_limit_reached():
+            print("================== x limit reached ====================")
+            self.X_MOTOR.setSpeed(0)
+            self.X_ENCODER.value = 0
+            self.X_MOTOR.setSpeed(MAX_SPEED / 4)
+            start_time = time.time()
+            time.sleep(3)
+            self.X_MOTOR.setSpeed(0)
+            self.is_x_homed = True
+
+        self.limit.on_pressed(X_LIMIT_SWITCH_NEG_PIN, on_limit_reached)
+        self.X_MOTOR.setSpeed(MAX_SPEED / 4)
+
+        while not self.is_x_homed:
             print("encoder: ", self.X_ENCODER.steps)
-            time.sleep(0.01)
-        self.X_MOTOR.stop()
-        self.X_ENCODER.value = 0
+            #print("fault pin: ", self.MOTOR_FAULT.is_active)
+            #print(f"en pin: {self.EN.is_active}" )
+            time.sleep(1)
 
-        self.X_MOTOR.forward(speed)
-        start_time = time.time()
-        # keep spinning for 1 second
-        while (time.time() - start_time) < 3:
-            print(self.get_x_pos_inches())
-            time.sleep(0.1)
-        self.X_MOTOR.stop()
-        self.is_x_homed = True
-        self.EN.off()
-
+       
     def get_x_pos_inches(self):
         return self.X_ENCODER.steps / STEPS_PER_INCH
 
@@ -85,7 +99,6 @@ class Gantry():
         target_y_steps = int(target_y_inch * STEPS_PER_INCH)
         
         print(f"Moving to ({target_x_inch} in, {target_y_inch} in) -> Target Steps: X={target_x_steps}, Y={target_y_steps}")
-        self.EN.on()
 
         while True:
             # 2. Read current real-time encoder positions
