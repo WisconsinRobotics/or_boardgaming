@@ -13,4 +13,4 @@ lm.on_pressed(X_LIMIT_SWITCH_NEG_PIN, ur_mom_x)
 lm.on_pressed(Y_LIMIT_SWITCH_NEG_PIN, ur_mom_y)
 
 while(True):
-    pass
+    time.sleep(0.05)

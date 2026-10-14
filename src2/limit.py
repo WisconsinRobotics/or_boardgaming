@@ -7,8 +7,8 @@ class LimitManager:
     def __init__(self):
         """Initializes all GPIO pins mapped in the LIMIT Enum."""
         self._map = {}
-        self._map[X_LIMIT_SWITCH_NEG_PIN] = Button(X_LIMIT_SWITCH_NEG_PIN, pull_up=True)
-        self._map[Y_LIMIT_SWITCH_NEG_PIN] = Button(Y_LIMIT_SWITCH_NEG_PIN, pull_up=True)
+        self._map[X_LIMIT_SWITCH_NEG_PIN] = Button(X_LIMIT_SWITCH_NEG_PIN, pull_up=True, bounce_time=0.02)
+        self._map[Y_LIMIT_SWITCH_NEG_PIN] = Button(Y_LIMIT_SWITCH_NEG_PIN, pull_up=True, bounce_time=0.02)
         print(f"Initialized limit switchs")
 
     def on_pressed(self, pin: int, callback):
