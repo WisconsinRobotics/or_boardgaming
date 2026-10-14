@@ -1,24 +1,25 @@
-from gpiozero import PhaseEnableMotor, OutputDevice, RotaryEncoder
+import sys
+from pathlib import Path
+
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root))
+from dual_max_motor.dual_max14870_rpi import motors, MAX_SPEED
+from gpiozero import RotaryEncoder
 from constants import *
 import time
 
-# --- Pin Configuration (Change these to match your wiring) ---
-PHASE_PIN = X_MOTOR_DIR_PIN # Controls direction
-ENABLE_PIN = X_MOTOR_PWM_PIN # Controls speed (PWM)
-
 # B before A for direction alignment
-ENCODER = RotaryEncoder(X_ENCODER_B, X_ENCODER_A, max_steps=0)
+ENCODER = RotaryEncoder(Y_ENCODER_B, Y_ENCODER_A, max_steps=0)
 # Initialize using the built-in PhaseEnableMotor class
-motor = PhaseEnableMotor(phase=PHASE_PIN, enable=ENABLE_PIN)
-MOTOR_ENABLE = OutputDevice(MOTOR_ENABLE_PIN, active_high=False, initial_value=False)
 
 try:
-    MOTOR_ENABLE.on()
-    print("Starting motor test with PhaseEnableMotor...")
+    motors.setSpeeds(0, 0)
+    motors.enable()
+    print("Starting motor test with dual_max...")
 
     # 1. Move forward at 10% speed
     print("Moving forward (10% speed)...")
-    motor.forward(speed=0.3)
+    motors.motor2.setSpeed(MAX_SPEED / 3)
 
     start_time = time.time()
     # keep spinning for 1 second
@@ -28,13 +29,14 @@ try:
 
     # 2. Stop
     print("Stopping...")
-    motor.stop()
+    motors.disable()
 
     time.sleep(1)
+    motors.enable()
 
     # 3. Move backward at 10% speed
     print("Moving backward (10% speed)...")
-    motor.backward(speed=0.3)
+    motors.motor2.setSpeed(-MAX_SPEED / 3)
 
     start_time = time.time()
     # keep spinning for 1 second
@@ -46,4 +48,5 @@ try:
 finally:
     # Safely stop and release pins on exit
     print("Stopping motor and cleaning up.")
-    motor.stop()
+    motors.setSpeeds(0, 0)
+    motors.disable()
